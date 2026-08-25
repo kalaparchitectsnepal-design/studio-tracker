@@ -608,7 +608,8 @@
   .auth-btn{flex:1;padding:12px 14px;border:1px solid var(--ink);background:var(--ink);color:#fff;font-weight:600;cursor:pointer;}
   .auth-btn.secondary{background:#fff;color:var(--ink);}
   #authMessage{margin-top:14px;font-size:12px;color:var(--markup);min-height:18px;}
-  .auth-user{position:fixed;right:16px;top:12px;z-index:20;font-size:11px;color:var(--ink-soft);background:#fff;border:1px solid var(--line);padding:6px 9px;}
+  .account-panel{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .account-email{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);margin-right:auto;}
   .auth-signout{border:0;background:none;text-decoration:underline;cursor:pointer;margin-left:8px;color:inherit;}
 </style>
 </head>
@@ -1480,6 +1481,11 @@
           <div class="mono" style="font-size:11px;color:var(--ink-soft);">${escapeHtml(person.role||'—')}</div>
         </div>
       </div>
+      <div class="account-panel">
+        <div class="account-email">${escapeHtml(currentAuthUser?.email || '')}</div>
+        <button class="btn ghost small" data-action="sign-out">Sign out</button>
+        <button class="btn ghost small danger" data-action="request-delete-account">Delete account</button>
+      </div>
       <div class="stat-row">
         <div class="stat"><div class="num">${tasks.length}</div><div class="label">Work items</div></div>
         <div class="stat"><div class="num" style="color:${overdueCount>0?'var(--amber)':'var(--ink)'}">${overdueCount}</div><div class="label">Overdue</div></div>
@@ -2006,6 +2012,25 @@
         state.view = 'identify';
         render();
         break;
+      case 'sign-out':
+        doSignOut();
+        break;
+      case 'request-delete-account':
+        modalDeleteAccount();
+        break;
+      case 'confirm-delete-account': {
+        const person = state.team.find(tm=>tm.id===state.currentPersonId);
+        if(person){
+          state.team = state.team.filter(tm=>tm.id!==person.id);
+          state.tasks.forEach(ts=>{
+            if(Array.isArray(ts.assignees)) ts.assignees = ts.assignees.filter(id=>id!==person.id);
+          });
+          saveTeam(); saveTasks();
+        }
+        closeModal();
+        doSignOut();
+        break;
+      }
     }
   }
 
@@ -2073,18 +2098,27 @@
     document.body.classList.remove('auth-locked');
     const root=document.getElementById('authRoot');
     if(root) root.remove();
-    let badge=document.getElementById('authUserBadge');
-    if(!badge){
-      badge=document.createElement('div');
-      badge.id='authUserBadge';
-      badge.className='auth-user';
-      document.body.appendChild(badge);
-    }
-    badge.innerHTML = `${escapeHtml(currentAuthUser?.email || 'Signed in')} <button class="auth-signout" id="authSignout">Sign out</button>`;
-    document.getElementById('authSignout').onclick=async()=>{
-      await supabaseClient.auth.signOut();
-      location.reload();
-    };
+    // No floating badge anymore — sign out / delete account now live on the Home page itself.
+  }
+
+  async function doSignOut(){
+    await supabaseClient.auth.signOut();
+    location.reload();
+  }
+
+  function modalDeleteAccount(){
+    openModal(`
+      <div class="modal" style="width:380px;">
+        <div class="modal-head">Delete your account?</div>
+        <div class="modal-body">
+          <p style="margin:0 0 10px;font-size:13px;color:var(--ink-soft);line-height:1.55;">This removes you from the team roster and unassigns you from every work item across every project. It can't be undone by you.</p>
+          <p style="margin:0;font-size:13px;color:var(--ink-soft);line-height:1.55;">Your login itself has to be removed by whoever manages this Supabase project — that last step isn't something the app is allowed to do on its own, for security reasons. After this, tell an admin to also remove your login from Supabase (Authentication → Users) so you're fully gone.</p>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost" data-action="close-modal">Cancel</button>
+          <button class="btn danger" data-action="confirm-delete-account" style="border-color:var(--markup);">Delete my account</button>
+        </div>
+      </div>`);
   }
 
   function subscribeRealtime(){
