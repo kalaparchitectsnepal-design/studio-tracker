@@ -1,0 +1,2112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Studio Tracker — Office</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sheet:#FBFBF9;
+    --sheet-alt:#F2F3F0;
+    --panel:#FFFFFF;
+    --ink:#1C1F1E;
+    --ink-soft:#5B615C;
+    --ink-faint:#9AA09A;
+    --line:#DBDFD9;
+    --line-strong:#B9C0B8;
+    --blue:#2B5D8C;
+    --blue-soft:#E7EEF3;
+    --amber:#C97A2B;
+    --amber-soft:#FBEFE0;
+    --green:#3F7A5C;
+    --green-soft:#E7F0EA;
+    --markup:#A6362A;
+    --markup-soft:#F7E2DF;
+    --violet:#6E5A8C;
+    --violet-soft:#ECE8F2;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      linear-gradient(var(--sheet) 0 0),
+      repeating-linear-gradient(0deg, transparent 0 31px, var(--line) 31px 32px),
+      repeating-linear-gradient(90deg, transparent 0 31px, var(--line) 31px 32px);
+    background-blend-mode:normal;
+    background-color:var(--sheet);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.028) 0 1px, transparent 1px 32px),
+      repeating-linear-gradient(90deg, rgba(0,0,0,0.028) 0 1px, transparent 1px 32px);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  h1,h2,h3,.disp{font-family:'Space Grotesk',sans-serif;}
+  #app{
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+  }
+  #app-row{
+    display:flex;
+    flex:1;
+    min-height:0;
+  }
+  .local-banner{
+    background:var(--amber-soft);color:var(--markup);
+    font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:center;
+    padding:7px 12px;border-bottom:1px solid var(--markup);
+  }
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    width:250px;
+    flex-shrink:0;
+    background:var(--panel);
+    border-right:1px solid var(--line-strong);
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+  }
+  .brand{
+    padding:20px 18px 14px;
+    border-bottom:1px solid var(--line);
+  }
+  .brand .mark{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:0.02em;
+  }
+  .brand .mark span{color:var(--blue);}
+  .brand .sub{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    color:var(--ink-faint);
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    margin-top:3px;
+  }
+  .sidebar-section-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    padding:16px 18px 6px;
+  }
+  .project-list{
+    flex:1;
+    overflow-y:auto;
+    padding-bottom:8px;
+  }
+  .project-item{
+    display:block;
+    width:100%;
+    text-align:left;
+    padding:9px 18px;
+    border:none;
+    background:none;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    color:var(--ink);
+    border-left:3px solid transparent;
+    position:relative;
+  }
+  .project-item:hover{background:var(--sheet-alt);}
+  .project-item.active{
+    background:var(--blue-soft);
+    border-left-color:var(--blue);
+    font-weight:600;
+  }
+  .project-item .pname{display:block;}
+  .project-item .pmeta{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-top:3px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    color:var(--ink-faint);
+  }
+  .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+  .dot.blue{background:var(--blue);}
+  .dot.amber{background:var(--amber);}
+  .dot.green{background:var(--green);}
+  .dot.gray{background:var(--ink-faint);}
+  .sidebar-actions{
+    padding:12px;
+    border-top:1px solid var(--line);
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .btn{
+    font-family:'Inter',sans-serif;
+    font-size:12.5px;
+    font-weight:600;
+    padding:8px 12px;
+    border-radius:var(--radius);
+    border:1px solid var(--line-strong);
+    background:var(--panel);
+    color:var(--ink);
+    cursor:pointer;
+    text-align:left;
+  }
+  .btn:hover{background:var(--sheet-alt);}
+  .btn.primary{
+    background:var(--ink);
+    color:var(--sheet);
+    border-color:var(--ink);
+    text-align:center;
+  }
+  .btn.primary:hover{background:#333;}
+  .btn.ghost{border-color:transparent;background:none;}
+  .btn.ghost:hover{background:var(--sheet-alt);}
+  .btn.small{padding:5px 9px;font-size:11.5px;}
+  .btn.danger{color:#9C3B2B;}
+
+  /* ---------- Main ---------- */
+  .main{flex:1;min-width:0;padding:28px 40px 60px;}
+  .empty-state{
+    max-width:420px;
+    margin:60px auto 0;
+    text-align:center;
+    color:var(--ink-soft);
+  }
+  .empty-state h2{margin:0 0 8px;font-size:19px;}
+  .empty-state p{font-size:13px;line-height:1.6;margin:0 0 18px;}
+
+  .project-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:6px;
+    gap:20px;
+  }
+  .project-header h1{font-size:26px;margin:0 0 4px;font-weight:600;}
+  .project-header .client{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+  }
+  select.status-select{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    padding:6px 8px;
+    border-radius:var(--radius);
+    border:1px solid var(--line-strong);
+    background:var(--panel);
+    color:var(--ink);
+  }
+  .stat-row{
+    display:flex;
+    gap:26px;
+    margin:22px 0 8px;
+    padding:14px 0;
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+  }
+  .stat{display:flex;flex-direction:column;}
+  .stat .num{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;line-height:1;}
+  .stat .label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.06em;margin-top:5px;}
+
+  /* ---------- Timeline (signature element) ---------- */
+  .timeline-wrap{margin:34px 0 10px;}
+  .timeline-title{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    margin-bottom:6px;
+  }
+  .timeline-svg{width:100%;display:block;overflow:visible;}
+  .ms-pin{cursor:pointer;}
+  .ms-pin .pin-label{font-family:'Inter',sans-serif;font-weight:600;font-size:11.5px;fill:var(--ink);}
+  .ms-pin .pin-date{font-family:'IBM Plex Mono',monospace;font-size:9.5px;fill:var(--ink-faint);}
+  .ms-pin .pin-frac{font-family:'IBM Plex Mono',monospace;font-size:9.5px;}
+  .ms-pin.selected .pin-card{stroke-width:1.6;}
+
+  /* ---------- Milestone panel ---------- */
+  .ms-panel{
+    margin-top:30px;
+    border:1px solid var(--line-strong);
+    border-radius:var(--radius);
+    background:var(--panel);
+  }
+  .ms-panel-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:14px 18px;
+    border-bottom:1px solid var(--line);
+  }
+  .ms-panel-head h3{font-size:15px;margin:0 0 2px;}
+  .ms-panel-head .due{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);}
+  .badge{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    padding:3px 7px;
+    border-radius:2px;
+  }
+  .badge.blue{background:var(--blue-soft);color:var(--blue);}
+  .badge.amber{background:var(--amber-soft);color:var(--amber);}
+  .badge.green{background:var(--green-soft);color:var(--green);}
+  .badge.gray{background:var(--sheet-alt);color:var(--ink-soft);}
+  .badge.markup{background:var(--markup-soft);color:var(--markup);}
+  .badge.violet{background:var(--violet-soft);color:var(--violet);}
+
+  .task-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:9px 18px;
+    border-bottom:1px solid var(--line);
+  }
+  .task-row:last-child{border-bottom:none;}
+  .task-check{
+    width:16px;height:16px;
+    border:1.5px solid var(--line-strong);
+    border-radius:3px;
+    flex-shrink:0;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--panel);
+  }
+  .task-check.done{background:var(--green);border-color:var(--green);}
+  .task-check.done::after{content:'';width:8px;height:5px;border-left:1.5px solid white;border-bottom:1.5px solid white;transform:rotate(-45deg) translate(0,-1px);}
+  .task-title{flex:1;font-size:13px;}
+  .task-title.done{color:var(--ink-faint);text-decoration:line-through;}
+  .task-assignee{
+    display:flex;align-items:center;gap:5px;
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);
+    flex-shrink:0;
+  }
+  .task-assignee-list{
+    display:flex;flex-wrap:wrap;align-items:center;gap:4px;
+    max-width:230px;flex-shrink:0;
+  }
+  .avatar{width:16px;height:16px;border-radius:50%;flex-shrink:0;}
+  .assignee-chip{
+    display:inline-flex;align-items:center;gap:4px;
+    font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft);
+    background:var(--sheet-alt);border:1px solid var(--line);border-radius:20px;
+    padding:2px 6px 2px 4px;
+  }
+  .chip-remove{
+    cursor:pointer;color:var(--ink-faint);font-size:12px;line-height:1;padding:0 1px;
+  }
+  .chip-remove:hover{color:var(--markup);}
+  .assignee-add-select{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-faint);
+    border:1px dashed var(--line-strong);background:none;border-radius:20px;
+    padding:2px 7px;cursor:pointer;
+  }
+  .assignee-add-select:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-soft);}
+
+  .task-status-select{
+    font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.03em;
+    border:1px solid transparent;border-radius:3px;padding:3px 6px;cursor:pointer;flex-shrink:0;width:90px;
+  }
+  .task-status-select.status-ongoing{color:var(--violet);background:var(--violet-soft);}
+  .task-status-select.status-upcoming{color:var(--blue);background:var(--blue-soft);}
+  .task-status-select.status-on-hold{color:var(--ink-soft);background:var(--sheet-alt);}
+  .task-status-select.status-done{color:var(--green);background:var(--green-soft);}
+  .task-status-select:hover{border-color:var(--line-strong);}
+
+  .task-status-group{border-bottom:1px solid var(--line);}
+  .task-status-group:last-child{border-bottom:none;}
+  .task-status-group.warn .task-status-group-head{color:var(--amber);}
+  .task-status-group.warn .task-status-count{color:var(--amber);}
+  .task-status-group.warn{background:var(--amber-soft);}
+  .task-status-group.warn .task-group-chevron{color:var(--amber);}
+  .task-status-group-head{
+    padding:9px 18px;
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--ink-soft);
+    cursor:pointer;
+    display:flex;align-items:center;gap:7px;
+  }
+  .task-status-group-head:hover{background:var(--sheet-alt);}
+  .task-status-count{color:var(--ink-faint);}
+  .task-group-chevron{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:14px;height:14px;color:var(--ink-faint);font-size:12px;
+    transition:transform 0.15s ease;flex-shrink:0;
+  }
+  .task-group-chevron.open{transform:rotate(90deg);}
+  .task-due{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-faint);width:78px;flex-shrink:0;}
+  .task-due.overdue{color:var(--amber);font-weight:600;}
+  .overdue-days{color:var(--amber);font-family:'IBM Plex Mono',monospace;font-weight:600;}
+  .task-del{opacity:0;cursor:pointer;color:var(--ink-faint);font-size:14px;flex-shrink:0;}
+  .task-row:hover .task-del{opacity:1;}
+  .event-row:hover .task-del{opacity:1;}
+  .ms-panel-empty{padding:22px 18px;color:var(--ink-faint);font-size:12.5px;}
+
+  .ms-subsection{border-top:1px solid var(--line);}
+  .ms-subsection-head{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding:12px 18px 6px;
+  }
+  .ms-subsection-head h4{font-size:12px;margin:0;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft);}
+  .ms-subsection-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-faint);}
+  .event-row{
+    display:block;
+    padding:0;
+    border-bottom:1px solid var(--line);
+  }
+  .event-row:last-child{border-bottom:none;}
+  .event-row.past .event-row-top{opacity:0.5;}
+  .event-row-top{
+    display:flex;align-items:center;gap:10px;
+    padding:7px 18px;
+    cursor:pointer;
+  }
+  .event-date{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);width:56px;flex-shrink:0;}
+  .event-title{font-size:12.5px;}
+  .event-chevron{
+    width:18px;height:18px;flex-shrink:0;color:var(--ink-faint);
+    display:flex;align-items:center;justify-content:center;
+    transition:transform 0.15s ease;
+    font-size:15px;
+    line-height:1;
+  }
+  .event-chevron.open{transform:rotate(90deg);}
+  .event-chevron.hidden{visibility:hidden;}
+  .event-agenda{
+    padding:2px 18px 12px 84px;
+  }
+  .event-agenda ul{margin:0;padding:0;list-style:none;}
+  .event-agenda li{
+    position:relative;padding-left:14px;
+    font-size:12px;color:var(--ink-soft);line-height:1.6;
+  }
+  .event-agenda li::before{
+    content:'–';position:absolute;left:0;color:var(--ink-faint);
+  }
+
+  .add-task-row{
+    display:flex;gap:8px;padding:10px 18px;
+    border-top:1px solid var(--line);
+    background:var(--sheet-alt);
+  }
+  .add-task-row input, .add-task-row select{
+    font-family:'Inter',sans-serif;font-size:12.5px;
+    padding:6px 8px;border:1px solid var(--line-strong);border-radius:var(--radius);
+    background:var(--panel);
+  }
+  .add-task-row input[type=text]{flex:1;}
+  .add-task-row input[type=date]{width:130px;}
+
+  .ms-list-footer{display:flex;justify-content:space-between;padding:10px 18px;}
+
+  /* ---------- Milestone list ---------- */
+  .mslist-wrap{margin:22px 0 0;}
+  .mslist{border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--panel);overflow:hidden;}
+  .mslist-row{
+    display:flex;align-items:center;gap:12px;
+    padding:11px 16px;
+    border-bottom:1px solid var(--line);
+    cursor:pointer;
+  }
+  .mslist-item:last-child .mslist-row{border-bottom:none;}
+  .mslist-item:has(.mslist-expanded) .mslist-row{border-bottom:1px solid var(--line-strong);}
+  .mslist-row:hover{background:var(--sheet-alt);}
+  .mslist-row.selected{background:var(--blue-soft);}
+  .mslist-chevron{
+    width:14px;height:14px;flex-shrink:0;color:var(--ink-faint);font-size:11px;
+    display:flex;align-items:center;justify-content:center;
+    transition:transform 0.15s ease;
+  }
+  .mslist-chevron.open{transform:rotate(90deg);}
+  .mslist-expanded{border-bottom:1px solid var(--line);background:var(--sheet-alt);padding:14px 16px;}
+  .mslist-expanded .ms-panel{border-radius:var(--radius);}
+  .mslist-item:last-child .mslist-expanded{border-bottom:none;}
+  .mslist-order{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-faint);
+    width:18px;flex-shrink:0;
+  }
+  .mslist-name{width:220px;flex-shrink:0;font-size:13px;font-weight:600;white-space:normal;line-height:1.35;}
+  .mslist-due{width:90px;flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);}
+  .progress-track{
+    flex:1;height:7px;border-radius:4px;background:var(--sheet-alt);
+    border:1px solid var(--line);overflow:hidden;
+  }
+  .progress-fill{height:100%;border-radius:4px;}
+  .mslist-frac{width:52px;flex-shrink:0;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);}
+
+  /* ---------- Change log ---------- */
+  .changelog-wrap{margin-top:30px;}
+  .changelog-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+  .changelog-head h3{font-size:15px;margin:0;}
+  .changelog-sub{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-faint);margin-top:2px;}
+  .changelog-totals{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--markup);}
+  .rev-row{
+    border:1px solid var(--line-strong);border-left:3px solid var(--markup);
+    border-radius:var(--radius);background:var(--panel);
+    padding:11px 14px;margin-bottom:8px;
+  }
+  .rev-row.resolved{border-left-color:var(--green);opacity:0.6;}
+  .rev-row.resolved .rev-title{text-decoration:line-through;}
+  .rev-check{display:inline-flex;align-items:center;cursor:pointer;}
+  .rev-check input{width:15px;height:15px;cursor:pointer;accent-color:var(--green);}
+  .rev-row-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .rev-title{font-weight:600;font-size:13px;}
+  .rev-meta{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-faint);margin-top:3px;}
+  .rev-notes{font-size:12.5px;color:var(--ink-soft);margin-top:6px;line-height:1.5;}
+  .rev-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+
+  /* ---------- Team view ---------- */
+  .team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:20px;}
+  .team-card{
+    border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--panel);
+    padding:14px;display:flex;gap:10px;align-items:center;
+  }
+  .team-card .avatar{width:34px;height:34px;}
+  .team-card .name{font-weight:600;font-size:13.5px;}
+  .team-card .role{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);}
+
+  /* ---------- Overview (all projects) ---------- */
+  .ov-table{border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--panel);margin-top:20px;overflow:hidden;}
+  .ov-head-row{
+    display:flex;gap:16px;padding:8px 18px;
+    background:var(--sheet-alt);border-bottom:1px solid var(--line-strong);
+    font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-faint);
+  }
+  .ov-row{
+    display:flex;gap:16px;align-items:center;padding:13px 18px;
+    border-bottom:1px solid var(--line);cursor:pointer;
+  }
+  .ov-row:last-child{border-bottom:none;}
+  .ov-row:hover{background:var(--sheet-alt);}
+  .ov-name{width:210px;flex-shrink:0;}
+  .ov-project-name{font-weight:600;font-size:13.5px;}
+  .ov-client{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-faint);margin-top:2px;}
+  .ov-people{flex:1;min-width:0;}
+  .ov-people-list{display:flex;flex-wrap:wrap;gap:5px;}
+  .ov-empty{color:var(--ink-faint);font-size:11.5px;font-style:italic;}
+  .ov-next{width:210px;flex-shrink:0;}
+  .ov-next-name{font-weight:600;font-size:12.5px;}
+  .ov-next-date{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);margin-top:2px;}
+  .ov-next-date.overdue{color:var(--amber);font-weight:600;}
+
+  /* ---------- Person view ---------- */
+  .pv-header{display:flex;align-items:center;gap:12px;margin-top:14px;margin-bottom:4px;}
+  .pv-avatar{width:40px;height:40px;flex-shrink:0;}
+  .pv-project-group{
+    border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--panel);
+    margin-top:14px;overflow:hidden;
+  }
+  .pv-project-head{
+    padding:10px 16px;background:var(--sheet-alt);border-bottom:1px solid var(--line-strong);
+    font-weight:600;font-size:13px;cursor:pointer;
+  }
+  .pv-project-head:hover{background:var(--blue-soft);color:var(--blue);}
+  .pv-project-count{font-family:'IBM Plex Mono',monospace;font-weight:400;color:var(--ink-faint);font-size:11px;}
+  .pv-task-row{
+    display:flex;align-items:center;gap:12px;padding:9px 16px;
+    border-bottom:1px solid var(--line);
+  }
+  .pv-task-row:last-child{border-bottom:none;}
+  .pv-task-title{flex:1;font-size:12.5px;}
+  .pv-task-ms{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-faint);width:150px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pv-task-due{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);width:80px;flex-shrink:0;text-align:right;}
+  .pv-task-due.overdue{color:var(--amber);font-weight:600;}
+
+  .pv-priority-row{
+    display:flex;align-items:center;gap:12px;padding:9px 16px;
+    border-bottom:1px solid var(--line);
+  }
+  .pv-priority-row:last-child{border-bottom:none;}
+  .pv-priority-due{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);
+    width:110px;flex-shrink:0;
+  }
+  .pv-priority-due.overdue{color:var(--amber);font-weight:600;}
+  .pv-priority-title{flex:1;font-size:12.5px;min-width:0;}
+  .pv-priority-context{
+    font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-faint);
+    width:200px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;
+  }
+
+  /* ---------- Identify gate ---------- */
+  .identify-gate{
+    width:100%;min-height:100%;display:flex;align-items:center;justify-content:center;padding:40px 20px;
+  }
+  .identify-card-outer{
+    width:360px;max-width:100%;
+    background:var(--panel);border:1px solid var(--line-strong);border-radius:var(--radius);
+    padding:26px 24px;box-shadow:0 12px 40px rgba(0,0,0,0.08);
+  }
+  .identify-list{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;}
+  .identify-card{
+    display:flex;align-items:center;gap:10px;
+    padding:9px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--sheet);
+    cursor:pointer;text-align:left;font-family:'Inter',sans-serif;
+  }
+  .identify-card:hover{border-color:var(--blue);background:var(--blue-soft);}
+  .identify-name{display:block;font-weight:600;font-size:13px;}
+  .identify-role{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);margin-top:1px;}
+
+  /* ---------- Modal ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(28,31,30,0.4);
+    display:flex;align-items:center;justify-content:center;z-index:50;
+  }
+  .modal{
+    background:var(--panel);border-radius:var(--radius);
+    width:380px;max-width:90vw;
+    border:1px solid var(--line-strong);
+    box-shadow:0 12px 40px rgba(0,0,0,0.18);
+  }
+  .modal-head{padding:16px 18px;border-bottom:1px solid var(--line);font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;}
+  .modal-body{padding:16px 18px;display:flex;flex-direction:column;gap:12px;}
+  .field label{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-soft);margin-bottom:5px;}
+  .field input, .field select{
+    width:100%;padding:8px 9px;border:1px solid var(--line-strong);border-radius:var(--radius);
+    font-family:'Inter',sans-serif;font-size:13px;background:var(--sheet);
+  }
+  .field textarea{
+    width:100%;padding:8px 9px;border:1px solid var(--line-strong);border-radius:var(--radius);
+    font-family:'Inter',sans-serif;font-size:13px;background:var(--sheet);resize:vertical;min-height:60px;
+  }
+  .field input[type=color]{padding:2px;height:34px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid var(--line);}
+
+  .top-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+  .tabbtn{background:none;border:none;font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-faint);cursor:pointer;padding:4px 0;}
+  .tabbtn.active{color:var(--ink);border-bottom:2px solid var(--blue);}
+  .save-indicator{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-faint);}
+
+  ::-webkit-scrollbar{width:9px;height:9px;}
+  ::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:5px;}
+
+  body.auth-locked #app, body.auth-locked #modalRoot { display:none !important; }
+  #authRoot{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--sheet);padding:24px;}
+  .auth-card{width:min(430px,100%);background:#fff;border:1px solid var(--line);padding:32px;box-shadow:0 12px 40px rgba(0,0,0,.08);}
+  .auth-brand{font:700 13px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:10px;}
+  .auth-card h1{font:700 30px 'Space Grotesk',sans-serif;margin:0 0 8px;}
+  .auth-card p{color:var(--ink-soft);font-size:14px;line-height:1.55;margin:0 0 24px;}
+  .auth-card label{display:block;font-size:12px;font-weight:600;margin:14px 0 6px;color:var(--ink-soft);}
+  .auth-card input{width:100%;padding:12px;border:1px solid var(--line);background:#fff;font:inherit;}
+  .auth-actions{display:flex;gap:8px;margin-top:20px;}
+  .auth-btn{flex:1;padding:12px 14px;border:1px solid var(--ink);background:var(--ink);color:#fff;font-weight:600;cursor:pointer;}
+  .auth-btn.secondary{background:#fff;color:var(--ink);}
+  #authMessage{margin-top:14px;font-size:12px;color:var(--markup);min-height:18px;}
+  .auth-user{position:fixed;right:16px;top:12px;z-index:20;font-size:11px;color:var(--ink-soft);background:#fff;border:1px solid var(--line);padding:6px 9px;}
+  .auth-signout{border:0;background:none;text-decoration:underline;cursor:pointer;margin-left:8px;color:inherit;}
+</style>
+</head>
+<body class="auth-locked">
+<div id="authRoot">
+  <div class="auth-card">
+    <div class="auth-brand">Studio Tracker · Office</div>
+    <h1>Sign in</h1>
+    <p>Use your office Studio Tracker account. Projects, tasks, milestones and revisions are shared across the team.</p>
+    <form id="authForm">
+      <label for="authEmail">Office email</label>
+      <input id="authEmail" type="email" autocomplete="email" placeholder="you@yourstudio.com" required>
+      <label for="authPassword">Password</label>
+      <input id="authPassword" type="password" autocomplete="current-password" placeholder="••••••••" required minlength="6">
+      <div class="auth-actions">
+        <button class="auth-btn" type="submit" data-auth-mode="signin">Sign in</button>
+        <button class="auth-btn secondary" type="button" id="authSignup">Create account</button>
+      </div>
+      <div id="authMessage"></div>
+    </form>
+  </div>
+</div>
+<div id="app"></div>
+<div id="modalRoot"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // Shared-office mode: connect this app to a Supabase project.
+  // Replace these two values before publishing. The anon key is intended for browser use;
+  // database access is controlled by the RLS policy in supabase.sql.
+  const SHARED_CONFIG = {
+    url: 'https://ksicdmzynouwyzimimjx.supabase.co',
+    anonKey: 'sb_publishable_SeeIIWdDRp5yhgZ8ZHqitw_d8fGZkOr',
+    table: 'studio_state',
+    pollMs: 4000
+  };
+
+  // Supabase Auth is required for the shared office deployment.
+  const supabaseClient = window.supabase.createClient(SHARED_CONFIG.url, SHARED_CONFIG.anonKey, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  });
+  let currentAuthUser = null;
+  let realtimeChannel = null;
+
+  let usingLocalFallback = false;
+  const LS_PREFIX = 'studio-tracker-fallback:';
+  const sharedConfigured = /^https?:\/\//.test(SHARED_CONFIG.url) && !SHARED_CONFIG.url.includes('YOUR_') && !SHARED_CONFIG.anonKey.includes('YOUR_');
+
+  function localStorageAdapter(){
+    return {
+      async get(key){
+        const raw = localStorage.getItem(LS_PREFIX+key);
+        if(raw===null) throw new Error('key not found: '+key);
+        return {key, value: raw, shared:false};
+      },
+      async set(key, value){
+        localStorage.setItem(LS_PREFIX+key, value);
+        return {key, value, shared:false};
+      },
+      async delete(key){
+        localStorage.removeItem(LS_PREFIX+key);
+        return {key, deleted:true, shared:false};
+      },
+      async list(prefix){
+        const keys=[];
+        for(let i=0;i<localStorage.length;i++){
+          const k=localStorage.key(i);
+          if(k && k.indexOf(LS_PREFIX)===0){ const bare=k.slice(LS_PREFIX.length); if(!prefix || bare.indexOf(prefix)===0) keys.push(bare); }
+        }
+        return {keys,prefix,shared:false};
+      }
+    };
+  }
+
+  function supabaseAdapter(){
+    const base = SHARED_CONFIG.url.replace(/\/$/,'') + '/rest/v1/' + SHARED_CONFIG.table;
+    async function headers(){
+      const {data} = await supabaseClient.auth.getSession();
+      const token = data?.session?.access_token || SHARED_CONFIG.anonKey;
+      return {
+        'apikey': SHARED_CONFIG.anonKey,
+        'Authorization': 'Bearer '+token,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation,resolution=merge-duplicates'
+      };
+    }
+    return {
+      async get(key){
+        const r=await fetch(base+'?key=eq.'+encodeURIComponent(key)+'&select=key,value,updated_at', {headers:await headers()});
+        if(!r.ok) throw new Error('shared get failed '+r.status);
+        const rows=await r.json();
+        if(!rows.length) throw new Error('key not found: '+key);
+        return {key,value:rows[0].value,shared:true,updated_at:rows[0].updated_at};
+      },
+      async set(key,value){
+        const r=await fetch(base,{method:'POST',headers:await headers(),body:JSON.stringify({key,value,updated_at:new Date().toISOString()})});
+        if(!r.ok) throw new Error('shared set failed '+r.status+' '+await r.text());
+        const rows=await r.json();
+        return {key,value,shared:true,row:rows[0]};
+      },
+      async delete(key){
+        const r=await fetch(base+'?key=eq.'+encodeURIComponent(key),{method:'DELETE',headers:await headers()});
+        if(!r.ok) throw new Error('shared delete failed '+r.status);
+        return {key,deleted:true,shared:true};
+      },
+      async list(prefix){
+        const q=prefix ? '&key=like.'+encodeURIComponent(prefix+'*') : '';
+        const r=await fetch(base+'?select=key,value,updated_at'+q, {headers:await headers()});
+        if(!r.ok) throw new Error('shared list failed '+r.status);
+        return {keys:await r.json(),prefix,shared:true};
+      }
+    };
+  }
+
+  if(typeof window.storage === 'undefined' || !window.storage){
+    usingLocalFallback = !sharedConfigured;
+    window.storage = sharedConfigured ? supabaseAdapter() : localStorageAdapter();
+  }
+
+  const PALETTE = ["#2B5D8C","#3F7A5C","#C97A2B","#7A4F8C","#8C4F4F","#4F7A8C","#8C7A2B","#5B4F8C"];
+
+  let state = {
+    team: [],
+    projects: [],
+    milestones: [],
+    tasks: [],
+    revisions: [],
+    events: [],
+    selectedProjectId: null,
+    selectedMilestoneId: null,
+    pendingAssignTaskId: null,
+    pendingDelete: null,
+    expandedEvents: {},
+    expandedTaskGroups: {},
+    selectedPersonId: null,
+    currentPersonId: null,
+    view: "project", // 'project' | 'team'
+    loaded: false,
+    saving: false
+  };
+
+  function uid(){ return (crypto.randomUUID ? crypto.randomUUID() : ('id-'+Date.now()+'-'+Math.random().toString(16).slice(2))); }
+  function todayISO(){ const d = new Date(); return d.toISOString().slice(0,10); }
+  function fmtDate(iso){
+    if(!iso) return "—";
+    const d = new Date(iso+"T00:00:00");
+    return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  }
+  function fmtDateShort(iso){
+    const d = new Date(iso+"T00:00:00");
+    return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  }
+
+  // ---------- Storage ----------
+  async function loadAll(){
+    async function safeGet(key, fallback, shared){
+      try{
+        const r = await window.storage.get(key, shared!==false);
+        return r && r.value ? JSON.parse(r.value) : fallback;
+      }catch(e){ return fallback; }
+    }
+    state.team = await safeGet('adp:team', []);
+    state.projects = await safeGet('adp:projects', []);
+    state.milestones = await safeGet('adp:milestones', []);
+    state.tasks = await safeGet('adp:tasks', []);
+    state.tasks.forEach(t=>{
+      if(!t.status || t.status==='todo') t.status='upcoming';
+      if(!Array.isArray(t.assignees)){ t.assignees = t.assignee ? [t.assignee] : []; }
+    });
+    state.revisions = await safeGet('adp:revisions', []);
+    state.revisions.forEach(r=>{ if(typeof r.resolved !== 'boolean') r.resolved = false; });
+    state.events = await safeGet('adp:events', []);
+    state.loaded = true;
+    if(state.projects.length && !state.selectedProjectId){
+      state.selectedProjectId = state.projects[0].id;
+    }
+
+    // Personal (per-browser-user) identity — not shared, so this choice is just for whoever is looking right now
+    const whoami = await safeGet('adp:whoami', null, false);
+    if(whoami && whoami!=='__skip__' && state.team.find(tm=>tm.id===whoami)){
+      state.currentPersonId = whoami;
+      state.view = 'welcome';
+    } else if(whoami==='__skip__'){
+      state.currentPersonId = null;
+      state.view = 'overview';
+    } else {
+      state.view = 'identify';
+    }
+  }
+  const saveWhoami = (id) => persist('adp:whoami', id, false);
+
+  let saveTimer = null;
+  function persist(key, value, shared){
+    state.saving = true;
+    renderSaveIndicator();
+    window.storage.set(key, JSON.stringify(value), shared!==false).catch((err)=>{ console.warn('save failed',err); }).finally(()=>{
+      state.saving = false;
+      renderSaveIndicator();
+    });
+  }
+  function renderSaveIndicator(){
+    const el = document.getElementById('saveIndicator');
+    if(el) el.textContent = state.saving ? 'saving…' : (sharedConfigured ? 'shared · synced' : 'local only');
+  }
+
+  async function syncSharedState(){
+    if(!sharedConfigured || !window.storage || !window.storage.get) return;
+    const keys = ['adp:team','adp:projects','adp:milestones','adp:tasks','adp:revisions','adp:events'];
+    let changed=false;
+    for(const key of keys){
+      try{
+        const r=await window.storage.get(key,true);
+        if(!r || typeof r.value!=='string') continue;
+        const incoming=JSON.parse(r.value);
+        const prop=({
+          'adp:team':'team','adp:projects':'projects','adp:milestones':'milestones',
+          'adp:tasks':'tasks','adp:revisions':'revisions','adp:events':'events'
+        })[key];
+        if(JSON.stringify(state[prop])!==JSON.stringify(incoming)){ state[prop]=incoming; changed=true; }
+      }catch(e){}
+    }
+    if(changed){
+      if(state.projects.length && !state.selectedProjectId) state.selectedProjectId=state.projects[0].id;
+      render();
+    }
+  }
+
+  const saveTeam = () => persist('adp:team', state.team);
+  const saveProjects = () => persist('adp:projects', state.projects);
+  const saveMilestones = () => persist('adp:milestones', state.milestones);
+  const saveTasks = () => persist('adp:tasks', state.tasks);
+  const saveRevisions = () => persist('adp:revisions', state.revisions);
+  const saveEvents = () => persist('adp:events', state.events);
+
+  // ---------- Derived data ----------
+  function milestonesFor(projectId){
+    return state.milestones.filter(m=>m.projectId===projectId).sort((a,b)=> a.dueDate.localeCompare(b.dueDate));
+  }
+  function tasksFor(milestoneId){
+    return state.tasks.filter(t=>t.milestoneId===milestoneId);
+  }
+  function daysOverdue(dueISO){
+    if(!dueISO) return 0;
+    const diff = Math.round((new Date(todayISO()+"T00:00:00") - new Date(dueISO+"T00:00:00")) / 86400000);
+    return diff>0 ? diff : 0;
+  }
+  function milestoneStatus(m){
+    const tasks = tasksFor(m.id);
+    const complete = tasks.length>0 && tasks.every(t=>t.status==='done');
+    const overdue = !complete && m.dueDate < todayISO();
+    return {tasks, complete, overdue, overdueDays: overdue ? daysOverdue(m.dueDate) : 0, doneCount: tasks.filter(t=>t.status==='done').length};
+  }
+  function projectStats(projectId){
+    const mss = milestonesFor(projectId);
+    let complete=0, overdue=0;
+    mss.forEach(m=>{
+      const s = milestoneStatus(m);
+      if(s.complete) complete++;
+      else if(s.overdue) overdue++;
+    });
+    return {total: mss.length, complete, overdue, upcoming: mss.length-complete-overdue};
+  }
+  function teamMember(id){ return state.team.find(t=>t.id===id); }
+  function revisionsFor(projectId){
+    return state.revisions.filter(r=>r.projectId===projectId).sort((a,b)=> b.date.localeCompare(a.date));
+  }
+  function eventsFor(milestoneId){
+    return state.events.filter(e=>e.milestoneId===milestoneId).sort((a,b)=> a.date.localeCompare(b.date));
+  }
+  function eventBadgeClass(type){
+    if(type==='Client meeting') return 'amber';
+    if(type==='Expert meeting') return 'violet';
+    if(type==='Internal deadline') return 'gray';
+    return 'blue'; // Internal meeting
+  }
+
+  // ---------- Rendering ----------
+  function fallbackBanner(){
+    return usingLocalFallback ? `
+      <div class="local-banner">
+        Shared studio board — changes are stored centrally and synced to everyone using the office link.
+      </div>` : '';
+  }
+
+  function render(){
+    const app = document.getElementById('app');
+    if(!state.loaded){
+      app.innerHTML = `<div style="padding:60px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;font-size:12px;">Loading studio board…</div>`;
+      return;
+    }
+    if(state.view==='identify'){
+      app.innerHTML = fallbackBanner() + `<div id="app-row">${renderIdentifyGate()}</div>`;
+      return;
+    }
+    app.innerHTML = `
+      ${fallbackBanner()}
+      <div id="app-row">
+        ${renderSidebar()}
+        <main class="main">${
+          state.view==='team' ? renderTeamView() :
+          state.view==='overview' ? renderOverviewView() :
+          state.view==='person' ? renderPersonMain() :
+          state.view==='welcome' ? renderWelcomeView() :
+          renderProjectView()
+        }</main>
+      </div>
+    `;
+    renderSaveIndicator();
+  }
+
+  function renderSidebar(){
+    const items = state.projects.map(p=>{
+      const stats = projectStats(p.id);
+      const dotClass = stats.overdue>0 ? 'amber' : (stats.total>0 && stats.complete===stats.total ? 'green' : 'blue');
+      const active = p.id===state.selectedProjectId && state.view==='project';
+      return `
+        <button class="project-item ${active?'active':''}" data-action="select-project" data-id="${p.id}">
+          <span class="pname">${escapeHtml(p.name)}</span>
+          <span class="pmeta"><span class="dot ${dotClass}"></span>${stats.complete}/${stats.total} milestones${stats.overdue?` · ${stats.overdue} overdue`:''}</span>
+        </button>`;
+    }).join('') || `<div style="padding:14px 18px;color:var(--ink-faint);font-size:12px;">No projects yet.</div>`;
+
+    return `
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="mark">STUDIO<span>/TRACKER</span></div>
+          <div class="sub">Project &amp; resource board</div>
+        </div>
+        <div class="sidebar-section-label">Projects</div>
+        <nav class="project-list">${items}</nav>
+        <div class="sidebar-actions">
+          ${state.currentPersonId ? `<button class="btn ghost" data-action="open-welcome" style="text-align:left;${state.view==='welcome'?'background:var(--sheet-alt);font-weight:600;':''}">Home</button>` : ''}
+          <button class="btn ghost" data-action="open-overview" style="text-align:left;${state.view==='overview'?'background:var(--sheet-alt);font-weight:600;':''}">All projects</button>
+          <button class="btn ghost" data-action="open-team" style="text-align:left;${state.view==='team'?'background:var(--sheet-alt);font-weight:600;':''}">Team &amp; resourcing</button>
+          <button class="btn primary" data-action="new-project">+ New project</button>
+          <div class="save-indicator" id="saveIndicator" style="text-align:center;margin-top:2px;">saved</div>
+        </div>
+      </aside>`;
+  }
+
+  function renderProjectView(){
+    const p = state.projects.find(x=>x.id===state.selectedProjectId);
+    if(!p){
+      return `
+        <div class="empty-state">
+          <h2>No project selected</h2>
+          <p>Start your first project to lay out milestones and the work behind them. Everything here is shared with your whole studio in real time.</p>
+          <button class="btn primary" data-action="new-project">+ New project</button>
+        </div>`;
+    }
+    const stats = projectStats(p.id);
+    const mss = milestonesFor(p.id);
+    const revs = revisionsFor(p.id);
+    const activeRevs = revs.filter(r=>!r.resolved);
+    const totalDelay = activeRevs.reduce((sum,r)=> sum + (Number(r.delayDays)||0), 0);
+
+    return `
+      <div class="project-header">
+        <div>
+          <div class="client">${escapeHtml(p.client||'No client set')}</div>
+          <h1>${escapeHtml(p.name)}</h1>
+        </div>
+        <select class="status-select" data-action="set-project-status" data-id="${p.id}">
+          ${['Active','On hold','Complete'].map(s=>`<option value="${s}" ${p.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="num">${stats.total}</div><div class="label">Milestones</div></div>
+        <div class="stat"><div class="num">${stats.complete}</div><div class="label">Complete</div></div>
+        <div class="stat"><div class="num" style="color:${stats.overdue>0?'var(--amber)':'var(--ink)'}">${stats.overdue}</div><div class="label">Overdue</div></div>
+        <div class="stat"><div class="num">${stats.upcoming}</div><div class="label">Upcoming</div></div>
+        <div class="stat"><div class="num" style="color:${totalDelay>0?'var(--markup)':'var(--ink)'}">${totalDelay>0?'+':''}${totalDelay}d</div><div class="label">Slipped to date</div></div>
+      </div>
+
+      <div class="timeline-wrap">
+        <div class="timeline-title">Milestone timeline</div>
+        ${mss.length ? renderTimeline(mss, activeRevs) : `<div class="ms-panel-empty" style="border:1px dashed var(--line-strong);border-radius:3px;">No milestones plotted yet. Add one to start the schedule.</div>`}
+      </div>
+
+      <button class="btn small" data-action="new-milestone" data-project="${p.id}" style="margin-top:10px;">+ Add milestone</button>
+
+      ${mss.length ? renderMilestoneList(mss) : ''}
+
+      ${renderChangeLog(p, revs, totalDelay)}
+    `;
+  }
+
+  function renderTimeline(mss, revs){
+    revs = revs || [];
+    const width = 900, height = 205, padX = 70, lineY = 92, laneY = 176;
+    const dates = mss.map(m=> new Date(m.dueDate+"T00:00:00").getTime())
+      .concat(revs.map(r=> new Date(r.date+"T00:00:00").getTime()));
+    let minD = Math.min(...dates, new Date(todayISO()+"T00:00:00").getTime());
+    let maxD = Math.max(...dates, new Date(todayISO()+"T00:00:00").getTime());
+    if(minD===maxD){ maxD = minD + 1000*60*60*24*7; }
+    const span = maxD-minD;
+    const xFor = (iso) => {
+      const t = new Date(iso+"T00:00:00").getTime();
+      return padX + ((t-minD)/span) * (width-2*padX);
+    };
+    const todayX = xFor(todayISO());
+
+    let pins = mss.map((m,i)=>{
+      const s = milestoneStatus(m);
+      const x = xFor(m.dueDate);
+      const color = s.complete ? 'var(--green)' : (s.overdue ? 'var(--amber)' : 'var(--blue)');
+      const above = i%2===0;
+      const selected = m.id===state.selectedMilestoneId;
+
+      const nameLines = wrapLines(m.name, 17);
+      const cardW = 132;
+      const lineH = 13;
+      const titleH = nameLines.length * lineH;
+      const cardH = 12 + titleH + 14 + 14 + (s.overdue ? 13 : 0); // top pad + title lines + date + frac + optional overdue line
+      const gap = 14; // gap between line and card
+      const cardTop = above ? (lineY - gap - cardH) : (lineY + gap);
+      const leaderY2 = above ? (cardTop + cardH) : cardTop;
+
+      let textY = cardTop + 15;
+      const titleTspans = nameLines.map(line=>{
+        const tspan = `<tspan x="${x}" y="${textY}">${escapeHtml(line)}</tspan>`;
+        textY += lineH;
+        return tspan;
+      }).join('');
+      const dateY = textY + 1; textY += 13;
+      const fracY = textY; textY += 13;
+      const overdueY = textY;
+      const overdueLine = s.overdue ? `<text x="${x}" y="${overdueY}" text-anchor="middle" class="mono" font-size="9.5" font-weight="600" fill="var(--amber)">${s.overdueDays}d overdue</text>` : '';
+
+      return `
+        <g class="ms-pin ${selected?'selected':''}" data-action="select-milestone" data-id="${m.id}">
+          <line x1="${x}" y1="${lineY}" x2="${x}" y2="${leaderY2}" stroke="${color}" stroke-width="1.2"/>
+          <circle cx="${x}" cy="${lineY}" r="5.5" fill="${color}" stroke="var(--panel)" stroke-width="2"/>
+          <rect class="pin-card" x="${x-cardW/2}" y="${cardTop}" width="${cardW}" height="${cardH}" rx="2"
+            fill="var(--panel)" stroke="${color}" stroke-width="${selected?1.6:1}"/>
+          <text class="pin-label" text-anchor="middle">${titleTspans}</text>
+          <text class="pin-date" x="${x}" y="${dateY}" text-anchor="middle">${fmtDateShort(m.dueDate)}</text>
+          <text class="pin-frac" x="${x}" y="${fracY}" text-anchor="middle" fill="${color}">${s.doneCount}/${s.tasks.length} done</text>
+          ${overdueLine}
+        </g>`;
+    }).join('');
+
+    // tick marks
+    let ticks = '';
+    const tickCount = 10;
+    for(let i=0;i<=tickCount;i++){
+      const tx = padX + (i/tickCount)*(width-2*padX);
+      ticks += `<line x1="${tx}" y1="${lineY-4}" x2="${tx}" y2="${lineY+4}" stroke="var(--line-strong)" stroke-width="1"/>`;
+    }
+
+    // revision / scope-change markers — kept in their own lane below the timeline for readability
+    let revMarks = '';
+    if(revs.length){
+      const charW = 6.1;
+      revMarks = revs.map(r=>{
+        const x = xFor(r.date);
+        const d = Number(r.delayDays)||0;
+        const label = `${fmtDateShort(r.date)} · ${d>0?`+${d}d`:'change'}`;
+        const labelW = Math.max(58, label.length*charW + 16);
+        const cx = Math.max(padX+labelW/2-10, Math.min(width-padX-labelW/2+10, x));
+        return `
+          <g>
+            <title>${escapeHtml(r.title)} — ${r.source==='Client'?'Client-driven':'Internal'} — ${fmtDate(r.date)}${d?` — +${d}d`:''}</title>
+            <line x1="${x}" y1="${lineY+4}" x2="${x}" y2="${laneY-11}" stroke="var(--markup)" stroke-width="1.1" stroke-dasharray="2,2"/>
+            <rect x="${cx-labelW/2}" y="${laneY-11}" width="${labelW}" height="22" rx="11" fill="var(--markup-soft)" stroke="var(--markup)" stroke-width="1"/>
+            <text x="${cx}" y="${laneY+4}" text-anchor="middle" class="mono" font-size="11" font-weight="600" fill="var(--markup)">${escapeHtml(label)}</text>
+          </g>`;
+      }).join('');
+    }
+    const laneCaption = revs.length ? `
+      <line x1="${padX}" y1="${laneY-30}" x2="${width-padX}" y2="${laneY-30}" stroke="var(--line)" stroke-width="1" stroke-dasharray="1,3"/>
+    ` : '';
+
+    return `
+      <svg class="timeline-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
+        <line x1="${padX}" y1="${lineY}" x2="${width-padX}" y2="${lineY}" stroke="var(--line-strong)" stroke-width="1.2"/>
+        ${ticks}
+        <line x1="${Math.max(padX,Math.min(width-padX,todayX))}" y1="${lineY-14}" x2="${Math.max(padX,Math.min(width-padX,todayX))}" y2="${lineY+14}" stroke="var(--ink)" stroke-width="1.4" stroke-dasharray="2,2"/>
+        <text x="${Math.max(padX,Math.min(width-padX,todayX))}" y="${lineY+28}" text-anchor="middle" class="mono" font-size="9.5" fill="var(--ink-soft)">TODAY</text>
+        ${pins}
+        ${laneCaption}
+        ${revMarks}
+      </svg>`;
+  }
+
+  function renderChangeLog(p, revs, totalDelay){
+    const sorted = revs.slice().sort((a,b)=> (a.resolved - b.resolved) || b.date.localeCompare(a.date));
+    const rows = sorted.map(r=>{
+      const ms = r.milestoneId ? state.milestones.find(m=>m.id===r.milestoneId) : null;
+      const d = Number(r.delayDays)||0;
+      return `
+        <div class="rev-row ${r.resolved?'resolved':''}">
+          <div class="rev-row-top">
+            <div>
+              <div class="rev-title">${escapeHtml(r.title)}</div>
+              <div class="rev-meta">${fmtDate(r.date)} · ${ms?escapeHtml(ms.name):'Whole project'}</div>
+            </div>
+            <div class="rev-right">
+              ${r.resolved ? `<span class="badge green">Addressed</span>` : `<span class="badge ${r.source==='Client'?'markup':'gray'}">${r.source==='Client'?'Client-driven':'Internal'}</span>`}
+              ${d ? `<span class="badge markup">+${d}d</span>` : ''}
+              <label class="rev-check" title="${r.resolved?'Reopen':'Mark addressed'}">
+                <input type="checkbox" data-action="toggle-revision-resolved" data-id="${r.id}" ${r.resolved?'checked':''}/>
+              </label>
+              <span class="task-del" style="opacity:1;" data-action="edit-revision" data-id="${r.id}" title="Edit">✎</span>
+              <span class="task-del" style="opacity:1;" data-action="request-delete" data-type="revision" data-id="${r.id}" data-label="this change log entry" title="Delete entry">✕</span>
+            </div>
+          </div>
+          ${r.notes ? `<div class="rev-notes">${escapeHtml(r.notes)}</div>` : ''}
+        </div>`;
+    }).join('') || `<div class="ms-panel-empty" style="border:1px dashed var(--line-strong);border-radius:3px;">No scope changes logged. When a redesign or client change resets progress, log it here to keep the record straight.</div>`;
+
+    return `
+      <div class="changelog-wrap">
+        <div class="changelog-head">
+          <div>
+            <h3>Change log</h3>
+            <div class="changelog-sub">Redesigns, scope changes, and what they cost the schedule</div>
+          </div>
+          <div class="changelog-totals">${revs.length} logged${totalDelay?` · +${totalDelay}d total`:''}</div>
+        </div>
+        ${rows}
+        <button class="btn small" data-action="new-revision" data-project="${p.id}" style="margin-top:4px;">+ Log a change</button>
+      </div>`;
+  }
+
+  function renderMilestoneList(mss){
+    const rows = mss.map((m,i)=>{
+      const s = milestoneStatus(m);
+      const pct = s.tasks.length ? Math.round((s.doneCount/s.tasks.length)*100) : 0;
+      const color = s.complete ? 'var(--green)' : (s.overdue ? 'var(--amber)' : 'var(--blue)');
+      const selected = m.id===state.selectedMilestoneId;
+      return `
+        <div class="mslist-item">
+          <div class="mslist-row ${selected?'selected':''}" data-action="select-milestone" data-id="${m.id}">
+            <div class="mslist-chevron ${selected?'open':''}">▸</div>
+            <div class="mslist-order">${String(i+1).padStart(2,'0')}</div>
+            <div class="mslist-name">${escapeHtml(m.name)}</div>
+            <div class="mslist-due">${fmtDateShort(m.dueDate)}</div>
+            <div class="progress-track"><div class="progress-fill" style="width:${pct}%;background:${color};"></div></div>
+            <div class="mslist-frac">${s.doneCount}/${s.tasks.length}</div>
+            <span class="badge ${s.complete?'green':(s.overdue?'amber':'blue')}">${s.complete?'Complete':(s.overdue?'Overdue':'Upcoming')}</span>
+            ${s.overdue ? `<span class="overdue-days">${s.overdueDays}d late</span>` : ''}
+          </div>
+          ${selected ? `<div class="mslist-expanded">${renderMilestonePanel(m)}</div>` : ''}
+        </div>`;
+    }).join('');
+    return `
+      <div class="mslist-wrap">
+        <div class="timeline-title">All milestones</div>
+        <div class="mslist">${rows}</div>
+      </div>`;
+  }
+
+  const TASK_STATUSES = [
+    {key:'ongoing', label:'Ongoing'},
+    {key:'upcoming', label:'Upcoming'},
+    {key:'on-hold', label:'On Hold'},
+    {key:'done', label:'Done'}
+  ];
+
+  function renderTaskRow(t){
+    const assignees = t.assignees || [];
+    const chips = assignees.map(id=>{
+      const mem = teamMember(id);
+      if(!mem) return '';
+      return `<span class="assignee-chip"><span class="avatar" style="background:${mem.color}"></span>${escapeHtml(mem.name)}<span class="chip-remove" data-action="remove-assignee" data-id="${t.id}" data-member="${id}" title="Remove">×</span></span>`;
+    }).join('');
+    const available = state.team.filter(tm=>!assignees.includes(tm.id));
+    const overdue = t.dueDate && t.status!=='done' && t.dueDate<todayISO();
+    return `
+      <div class="task-row">
+        <select class="task-status-select status-${t.status}" data-action="change-task-status" data-id="${t.id}">
+          ${TASK_STATUSES.map(st=>`<option value="${st.key}" ${t.status===st.key?'selected':''}>${st.label}</option>`).join('')}
+        </select>
+        <div class="task-title ${t.status==='done'?'done':''}">${escapeHtml(t.title)}</div>
+        <div class="task-assignee-list">
+          ${chips}
+          <select class="assignee-add-select" data-action="add-assignee" data-id="${t.id}">
+            <option value="" selected>+ Add</option>
+            ${available.map(tm=>`<option value="${tm.id}">${escapeHtml(tm.name)}</option>`).join('')}
+            <option value="__new__">+ Add teammate…</option>
+          </select>
+        </div>
+        <div class="task-due ${overdue?'overdue':''}">${t.dueDate?fmtDateShort(t.dueDate):'—'}${overdue?` (${daysOverdue(t.dueDate)}d)`:''}</div>
+        <div class="task-del" data-action="request-delete" data-type="task" data-id="${t.id}" data-label="this work item">✕</div>
+      </div>`;
+  }
+
+  function renderTaskGroupSection(milestoneId, key, label, tasks, opts){
+    opts = opts || {};
+    const groupKey = milestoneId+':'+key;
+    const isOpen = !!state.expandedTaskGroups[groupKey];
+    return `
+      <div class="task-status-group ${opts.warn?'warn':''}">
+        <div class="task-status-group-head" data-action="toggle-task-group" data-key="${groupKey}">
+          <span class="task-group-chevron ${isOpen?'open':''}">▸</span>
+          ${label} <span class="task-status-count">${tasks.length}</span>
+        </div>
+        ${isOpen ? (tasks.length ? tasks.map(renderTaskRow).join('') : `<div class="ms-panel-empty" style="padding:8px 18px;">${opts.emptyText||'Nothing here yet.'}</div>`) : ''}
+      </div>`;
+  }
+
+  function renderMilestonePanel(m){
+    const s = milestoneStatus(m);
+    const badge = s.complete ? '<span class="badge green">Complete</span>' : (s.overdue ? '<span class="badge amber">Overdue</span>' : '<span class="badge blue">Upcoming</span>');
+    const tasksSorted = s.tasks.slice().sort((a,b)=> (a.dueDate||'').localeCompare(b.dueDate||''));
+    const today = todayISO();
+    const overdueTasks = tasksSorted.filter(t=> t.status!=='done' && t.dueDate && t.dueDate<today);
+    const overdueIds = new Set(overdueTasks.map(t=>t.id));
+
+    const rows =
+      renderTaskGroupSection(m.id, 'overdue', 'Overdue', overdueTasks, {warn:true, emptyText:'Nothing overdue right now.'}) +
+      TASK_STATUSES.map(st=>{
+        const group = tasksSorted.filter(t=>t.status===st.key && !overdueIds.has(t.id));
+        return renderTaskGroupSection(m.id, st.key, st.label, group);
+      }).join('');
+
+    const memberOpts = state.team.map(tm=>`<option value="${tm.id}">${escapeHtml(tm.name)}</option>`).join('');
+
+    const evs = eventsFor(m.id);
+    const evRows = evs.map(ev=>{
+      const bullets = (ev.notes||'').split('\n').map(l=>l.replace(/^[\s•\-\*]+/,'').trim()).filter(Boolean);
+      const hasNotes = bullets.length>0;
+      const isOpen = !!state.expandedEvents[ev.id];
+      return `
+      <div class="event-row ${ev.date<today?'past':''}">
+        <div class="event-row-top" data-action="${hasNotes?'toggle-event-expand':''}" data-id="${ev.id}">
+          <div class="event-date">${fmtDateShort(ev.date)}</div>
+          <span class="badge ${eventBadgeClass(ev.type)}">${ev.type}</span>
+          <div style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+            <div class="event-title">${escapeHtml(ev.title)}</div>
+            <div class="event-chevron ${hasNotes?'':'hidden'} ${isOpen?'open':''}">▸</div>
+          </div>
+          <div class="task-del" data-action="edit-event" data-id="${ev.id}" title="Edit">✎</div>
+          <div class="task-del" data-action="request-delete" data-type="event" data-id="${ev.id}" data-label="this entry" title="Delete">✕</div>
+        </div>
+        ${hasNotes && isOpen ? `<div class="event-agenda"><ul>${bullets.map(b=>`<li>${escapeHtml(b)}</li>`).join('')}</ul></div>` : ''}
+      </div>`;
+    }).join('') || `<div class="ms-panel-empty" style="padding:10px 18px;">No meetings or internal dates logged for this milestone.</div>`;
+
+    return `
+      <div class="ms-panel">
+        <div class="ms-panel-head">
+          <div>
+            <h3>${escapeHtml(m.name)}</h3>
+            <div class="due">Due ${fmtDate(m.dueDate)}${s.overdue ? ` · <span class="overdue-days">${s.overdueDays} day${s.overdueDays===1?'':'s'} overdue</span>` : ''}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            ${badge}
+            <span class="task-del" style="opacity:1;" data-action="request-delete" data-type="milestone" data-id="${m.id}" data-label="this milestone and everything under it (work items, meetings, dates)" title="Delete milestone">✕</span>
+            <button class="btn ghost small" data-action="close-milestone-panel" title="Collapse this panel">Close</button>
+          </div>
+        </div>
+        <div>${rows}</div>
+
+        <div class="ms-subsection">
+          <div class="ms-subsection-head">
+            <h4>Add a work item</h4>
+          </div>
+          <div class="add-task-row">
+            <input type="text" id="newTaskTitle" placeholder="What needs to get done…" />
+            <select id="newTaskStatus" class="task-status-select status-upcoming" data-role="new-task-status">
+              ${TASK_STATUSES.map(st=>`<option value="${st.key}" ${st.key==='upcoming'?'selected':''}>${st.label}</option>`).join('')}
+            </select>
+            <select id="newTaskAssignee"><option value="">Unassigned</option>${memberOpts}</select>
+            <input type="date" id="newTaskDue" />
+            <button class="btn small primary" data-action="add-task" data-milestone="${m.id}">Add</button>
+          </div>
+        </div>
+
+        <div class="ms-subsection">
+          <div class="ms-subsection-head">
+            <h4>Meetings &amp; internal dates</h4>
+            <span class="ms-subsection-sub">Kept off the main timeline</span>
+          </div>
+          <div>${evRows}</div>
+          <div style="padding:10px 18px;">
+            <button class="btn small" data-action="new-event" data-milestone="${m.id}">+ Add date</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function nextMilestoneInfo(projectId){
+    const mss = milestonesFor(projectId);
+    const next = mss.find(m=> !milestoneStatus(m).complete);
+    if(!next) return null;
+    const s = milestoneStatus(next);
+    return {milestone: next, overdue: s.overdue, overdueDays: s.overdueDays};
+  }
+
+  function projectPeople(projectId){
+    const mss = milestonesFor(projectId);
+    const msIds = new Set(mss.map(m=>m.id));
+    const ids = [];
+    state.tasks.forEach(t=>{
+      if(msIds.has(t.milestoneId) && Array.isArray(t.assignees)){
+        t.assignees.forEach(id=>{ if(!ids.includes(id)) ids.push(id); });
+      }
+    });
+    return ids.map(teamMember).filter(Boolean);
+  }
+
+  function renderOverviewView(){
+    const rows = state.projects.map(p=>{
+      const people = projectPeople(p.id);
+      const peopleHtml = people.length
+        ? `<div class="ov-people-list">${people.map(m=>`<span class="assignee-chip"><span class="avatar" style="background:${m.color}"></span>${escapeHtml(m.name)}</span>`).join('')}</div>`
+        : `<span class="ov-empty">Unassigned</span>`;
+
+      const next = nextMilestoneInfo(p.id);
+      const mss = milestonesFor(p.id);
+      let nextHtml;
+      if(next){
+        nextHtml = `
+          <div class="ov-next-name">${escapeHtml(next.milestone.name)}</div>
+          <div class="ov-next-date ${next.overdue?'overdue':''}">${fmtDate(next.milestone.dueDate)}${next.overdue?` · ${next.overdueDays}d overdue`:''}</div>`;
+      } else if(mss.length){
+        nextHtml = `<span class="badge green">All milestones complete</span>`;
+      } else {
+        nextHtml = `<span class="ov-empty">No milestones yet</span>`;
+      }
+
+      return `
+        <div class="ov-row" data-action="select-project" data-id="${p.id}">
+          <div class="ov-name">
+            <div class="ov-project-name">${escapeHtml(p.name)}</div>
+            <div class="ov-client">${escapeHtml(p.client||'No client set')}</div>
+          </div>
+          <div class="ov-people">${peopleHtml}</div>
+          <div class="ov-next">${nextHtml}</div>
+        </div>`;
+    }).join('') || `<div class="ms-panel-empty" style="border:1px dashed var(--line-strong);border-radius:3px;">No projects yet.</div>`;
+
+    return `
+      <div class="top-nav">
+        <h1 style="font-size:22px;margin:0;">All projects</h1>
+      </div>
+      <p style="color:var(--ink-soft);font-size:13px;max-width:560px;">A studio-wide snapshot — who's on each project and what's due next. Click any row to open it.</p>
+      <div class="ov-table">
+        <div class="ov-head-row">
+          <div class="ov-name">Project</div>
+          <div class="ov-people">Team</div>
+          <div class="ov-next">Next milestone</div>
+        </div>
+        ${rows}
+      </div>
+    `;
+  }
+
+  function greeting(){
+    const h = new Date().getHours();
+    if(h<12) return 'Good morning';
+    if(h<17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  function renderIdentifyGate(){
+    const cards = state.team.map(tm=>`
+      <button class="identify-card" data-action="identify-as" data-id="${tm.id}">
+        <span class="avatar" style="width:32px;height:32px;background:${tm.color}"></span>
+        <span>
+          <span class="identify-name">${escapeHtml(tm.name)}</span>
+          <span class="identify-role">${escapeHtml(tm.role||'—')}</span>
+        </span>
+      </button>`).join('') || `<div class="ms-panel-empty" style="border:1px dashed var(--line-strong);border-radius:3px;">No one's been added to the team yet.</div>`;
+
+    return `
+      <div class="identify-gate">
+        <div class="identify-card-outer">
+          <div class="brand" style="border:none;padding:0 0 18px;text-align:center;">
+            <div class="mark" style="justify-content:center;">STUDIO<span>/TRACKER</span></div>
+            <div class="sub">Project &amp; resource board</div>
+          </div>
+          <h2 style="text-align:center;font-size:17px;margin:0 0 4px;">Who's this?</h2>
+          <p style="text-align:center;color:var(--ink-soft);font-size:12.5px;margin:0 0 18px;">Pick your name to see what's assigned to you first. This is just for you — no one else sees who you picked.</p>
+          <div class="identify-list">${cards}</div>
+          <button class="btn small" data-action="identify-new" style="width:100%;margin-top:10px;">+ I'm not on the list yet</button>
+          <button class="btn ghost small" data-action="identify-skip" style="width:100%;margin-top:6px;">Skip — just browse the board</button>
+        </div>
+      </div>`;
+  }
+
+  function renderWelcomeView(){
+    const person = state.team.find(tm=>tm.id===state.currentPersonId);
+    if(!person){ state.view='identify'; return renderIdentifyGate(); }
+
+    const tasks = state.tasks.filter(t=> Array.isArray(t.assignees) && t.assignees.includes(person.id));
+    const today = todayISO();
+    const overdueCount = tasks.filter(t=> t.status!=='done' && t.dueDate && t.dueDate<today).length;
+    const flat = [];
+    tasks.forEach(t=>{
+      const ms = state.milestones.find(m=>m.id===t.milestoneId);
+      if(!ms) return;
+      const proj = state.projects.find(p=>p.id===ms.projectId);
+      if(!proj) return;
+      flat.push({task:t, milestone:ms, project:proj});
+    });
+    const projectCount = new Set(flat.map(x=>x.project.id)).size;
+
+    const priorityItems = flat
+      .filter(x=> x.task.status!=='done')
+      .sort((a,b)=> (a.task.dueDate||'9999-99-99').localeCompare(b.task.dueDate||'9999-99-99'))
+      .slice(0, 8);
+
+    const priorityHtml = priorityItems.length ? priorityItems.map(({task,milestone,project})=>{
+      const overdue = task.dueDate && task.dueDate<today;
+      return `
+        <div class="pv-priority-row">
+          <div class="pv-priority-due ${overdue?'overdue':''}">${task.dueDate?fmtDateShort(task.dueDate):'No date'}${overdue?` · ${daysOverdue(task.dueDate)}d late`:''}</div>
+          <select class="task-status-select status-${task.status}" data-action="change-task-status" data-id="${task.id}">
+            ${TASK_STATUSES.map(st=>`<option value="${st.key}" ${task.status===st.key?'selected':''}>${st.label}</option>`).join('')}
+          </select>
+          <div class="pv-priority-title">${escapeHtml(task.title)}</div>
+          <div class="pv-priority-context">${escapeHtml(project.name)} · ${escapeHtml(milestone.name)}</div>
+        </div>`;
+    }).join('') : `<div class="ms-panel-empty" style="border:1px dashed var(--line-strong);border-radius:3px;">Nothing outstanding — everything assigned to you is done.</div>`;
+
+    // Upcoming meetings/dates across their projects, next 14 days
+    const soon = new Date(); soon.setDate(soon.getDate()+14);
+    const soonISO = soon.toISOString().slice(0,10);
+    const theirMsIds = new Set(flat.map(x=>x.milestone.id));
+    const upcomingEvents = state.events
+      .filter(ev=> theirMsIds.has(ev.milestoneId) && ev.date>=today && ev.date<=soonISO)
+      .sort((a,b)=> a.date.localeCompare(b.date))
+      .slice(0,6);
+    const eventsHtml = upcomingEvents.length ? upcomingEvents.map(ev=>{
+      const ms = state.milestones.find(m=>m.id===ev.milestoneId);
+      return `
+        <div class="pv-priority-row">
+          <div class="pv-priority-due">${fmtDateShort(ev.date)}</div>
+          <span class="badge ${eventBadgeClass(ev.type)}">${ev.type}</span>
+          <div class="pv-priority-title">${escapeHtml(ev.title)}</div>
+          <div class="pv-priority-context">${ms?escapeHtml(ms.name):''}</div>
+        </div>`;
+    }).join('') : `<div class="ms-panel-empty" style="border:1px dashed var(--line-strong);border-radius:3px;">Nothing on the calendar in the next two weeks.</div>`;
+
+    return `
+      <div class="top-nav">
+        <div></div>
+        <button class="btn ghost small" data-action="switch-identity">Not ${escapeHtml(person.name.split(' ')[0])}? Switch</button>
+      </div>
+      <div class="pv-header">
+        <span class="avatar pv-avatar" style="background:${person.color}"></span>
+        <div>
+          <h1 style="font-size:22px;margin:0;">${greeting()}, ${escapeHtml(person.name.split(' ')[0])}</h1>
+          <div class="mono" style="font-size:11px;color:var(--ink-soft);">${escapeHtml(person.role||'—')}</div>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="num">${tasks.length}</div><div class="label">Work items</div></div>
+        <div class="stat"><div class="num" style="color:${overdueCount>0?'var(--amber)':'var(--ink)'}">${overdueCount}</div><div class="label">Overdue</div></div>
+        <div class="stat"><div class="num">${projectCount}</div><div class="label">Projects</div></div>
+      </div>
+
+      <div class="mslist-wrap" style="margin-top:26px;">
+        <div class="timeline-title">Your priority order — soonest due date first</div>
+        <div class="mslist" style="overflow:visible;">${priorityHtml}</div>
+      </div>
+
+      <div class="mslist-wrap" style="margin-top:26px;">
+        <div class="timeline-title">Coming up in the next two weeks</div>
+        <div class="mslist" style="overflow:visible;">${eventsHtml}</div>
+      </div>
+
+      <div style="margin-top:26px;">
+        <button class="btn small" data-action="open-overview">See all studio projects →</button>
+      </div>
+    `;
+  }
+
+  function renderTeamView(){
+    const cards = state.team.map(tm=>`
+      <div class="team-card" data-action="view-person" data-id="${tm.id}" style="cursor:pointer;">
+        <span class="avatar" style="background:${tm.color}"></span>
+        <div>
+          <div class="name">${escapeHtml(tm.name)}</div>
+          <div class="role">${escapeHtml(tm.role||'—')}</div>
+        </div>
+      </div>`).join('') || `<div class="ms-panel-empty">No team members yet.</div>`;
+
+    return `
+      <div class="top-nav">
+        <h1 style="font-size:22px;margin:0;">Team &amp; resourcing</h1>
+      </div>
+      <p style="color:var(--ink-soft);font-size:13px;max-width:520px;">People here can be assigned to work items across every project. Click anyone to see everything they're tagged on.</p>
+      <button class="btn small primary" data-action="new-member">+ Add team member</button>
+      <div class="team-grid">${cards}</div>
+    `;
+  }
+
+  function renderPersonMain(){
+    const person = state.team.find(t=>t.id===state.selectedPersonId);
+    if(!person) return renderTeamView();
+    return renderPersonView(person);
+  }
+
+  function renderPersonView(person){
+    const tasks = state.tasks.filter(t=> Array.isArray(t.assignees) && t.assignees.includes(person.id));
+    const byProject = {};
+    const flat = [];
+    tasks.forEach(t=>{
+      const ms = state.milestones.find(m=>m.id===t.milestoneId);
+      if(!ms) return;
+      const proj = state.projects.find(p=>p.id===ms.projectId);
+      if(!proj) return;
+      if(!byProject[proj.id]) byProject[proj.id] = {project:proj, items:[]};
+      byProject[proj.id].items.push({task:t, milestone:ms});
+      flat.push({task:t, milestone:ms, project:proj});
+    });
+    const groups = Object.values(byProject);
+    const today = todayISO();
+    const overdueCount = tasks.filter(t=> t.status!=='done' && t.dueDate && t.dueDate<today).length;
+
+    // Priority order: soonest / most overdue due dates first. Items with no due date go last. Done items excluded.
+    const priorityItems = flat
+      .filter(x=> x.task.status!=='done')
+      .sort((a,b)=> (a.task.dueDate||'9999-99-99').localeCompare(b.task.dueDate||'9999-99-99'));
+
+    const priorityHtml = priorityItems.length ? priorityItems.map(({task,milestone,project})=>{
+      const overdue = task.dueDate && task.dueDate<today;
+      return `
+        <div class="pv-priority-row">
+          <div class="pv-priority-due ${overdue?'overdue':''}">${task.dueDate?fmtDateShort(task.dueDate):'No date'}${overdue?` · ${daysOverdue(task.dueDate)}d late`:''}</div>
+          <select class="task-status-select status-${task.status}" data-action="change-task-status" data-id="${task.id}">
+            ${TASK_STATUSES.map(st=>`<option value="${st.key}" ${task.status===st.key?'selected':''}>${st.label}</option>`).join('')}
+          </select>
+          <div class="pv-priority-title">${escapeHtml(task.title)}</div>
+          <div class="pv-priority-context">${escapeHtml(project.name)} · ${escapeHtml(milestone.name)}</div>
+        </div>`;
+    }).join('') : `<div class="ms-panel-empty" style="border:1px dashed var(--line-strong);border-radius:3px;">Nothing outstanding — everything assigned is done.</div>`;
+
+    const groupsHtml = groups.length ? groups.map(g=>{
+      const rows = g.items.slice()
+        .sort((a,b)=> (a.task.dueDate||'').localeCompare(b.task.dueDate||''))
+        .map(({task,milestone})=>{
+          const overdue = task.status!=='done' && task.dueDate && task.dueDate<today;
+          return `
+            <div class="pv-task-row">
+              <select class="task-status-select status-${task.status}" data-action="change-task-status" data-id="${task.id}">
+                ${TASK_STATUSES.map(st=>`<option value="${st.key}" ${task.status===st.key?'selected':''}>${st.label}</option>`).join('')}
+              </select>
+              <div class="pv-task-title">${escapeHtml(task.title)}</div>
+              <div class="pv-task-ms">${escapeHtml(milestone.name)}</div>
+              <div class="pv-task-due ${overdue?'overdue':''}">${task.dueDate?fmtDateShort(task.dueDate):'—'}${overdue?` (${daysOverdue(task.dueDate)}d)`:''}</div>
+            </div>`;
+        }).join('');
+      return `
+        <div class="pv-project-group">
+          <div class="pv-project-head" data-action="select-project" data-id="${g.project.id}">
+            ${escapeHtml(g.project.name)} <span class="pv-project-count">${g.items.length}</span>
+          </div>
+          ${rows}
+        </div>`;
+    }).join('') : `<div class="ms-panel-empty" style="border:1px dashed var(--line-strong);border-radius:3px;">Not tagged on any work items yet.</div>`;
+
+    return `
+      <div class="top-nav">
+        <button class="btn ghost small" data-action="open-team">← Team</button>
+      </div>
+      <div class="pv-header">
+        <span class="avatar pv-avatar" style="background:${person.color}"></span>
+        <div>
+          <h1 style="font-size:20px;margin:0;">${escapeHtml(person.name)}</h1>
+          <div class="mono" style="font-size:11px;color:var(--ink-soft);">${escapeHtml(person.role||'—')}</div>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="num">${tasks.length}</div><div class="label">Work items</div></div>
+        <div class="stat"><div class="num" style="color:${overdueCount>0?'var(--amber)':'var(--ink)'}">${overdueCount}</div><div class="label">Overdue</div></div>
+        <div class="stat"><div class="num">${groups.length}</div><div class="label">Projects</div></div>
+      </div>
+
+      <div class="mslist-wrap" style="margin-top:26px;">
+        <div class="timeline-title">Priority order — soonest due date first</div>
+        <div class="mslist" style="overflow:visible;">${priorityHtml}</div>
+      </div>
+
+      <div class="timeline-title" style="margin-top:28px;">By project</div>
+      ${groupsHtml}
+    `;
+  }
+
+  function truncate(s,n){ return s.length>n ? s.slice(0,n-1)+'…' : s; }
+  function wrapLines(text, maxChars){
+    const words = String(text||'').split(/\s+/).filter(Boolean);
+    const lines = [];
+    let cur = '';
+    words.forEach(w=>{
+      if(cur && (cur+' '+w).length > maxChars){ lines.push(cur); cur = w; }
+      else { cur = cur ? cur+' '+w : w; }
+    });
+    if(cur) lines.push(cur);
+    return lines.length ? lines : [''];
+  }
+  function escapeHtml(s){
+    return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---------- Modals ----------
+  function openModal(html){
+    document.getElementById('modalRoot').innerHTML = `<div class="overlay" data-action="close-modal">${html}</div>`;
+  }
+  function closeModal(){ document.getElementById('modalRoot').innerHTML=''; state.pendingAssignTaskId = null; state.pendingDelete = null; }
+
+  function modalNewProject(){
+    openModal(`
+      <div class="modal">
+        <div class="modal-head">New project</div>
+        <div class="modal-body">
+          <div class="field"><label>Project name</label><input id="mProjName" type="text" placeholder="e.g. Riverside Residence"/></div>
+          <div class="field"><label>Client</label><input id="mProjClient" type="text" placeholder="e.g. Alvarez Family"/></div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost" data-action="close-modal">Cancel</button>
+          <button class="btn primary" data-action="create-project">Create project</button>
+        </div>
+      </div>`);
+  }
+  function modalNewMilestone(projectId){
+    openModal(`
+      <div class="modal">
+        <div class="modal-head">New milestone</div>
+        <div class="modal-body">
+          <div class="field"><label>Milestone name</label><input id="mMsName" type="text" placeholder="e.g. Schematic Design"/></div>
+          <div class="field"><label>Due date</label><input id="mMsDue" type="date" value="${todayISO()}"/></div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost" data-action="close-modal">Cancel</button>
+          <button class="btn primary" data-action="create-milestone" data-project="${projectId}">Add milestone</button>
+        </div>
+      </div>`);
+  }
+  function modalNewMember(){
+    const color = PALETTE[state.team.length % PALETTE.length];
+    openModal(`
+      <div class="modal">
+        <div class="modal-head">Add team member</div>
+        <div class="modal-body">
+          <div class="field"><label>Name</label><input id="mMemName" type="text" placeholder="e.g. Priya Nair"/></div>
+          <div class="field"><label>Role</label><input id="mMemRole" type="text" placeholder="e.g. Project Architect"/></div>
+          <div class="field"><label>Color tag</label><input id="mMemColor" type="color" value="${color}"/></div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost" data-action="close-modal">Cancel</button>
+          <button class="btn primary" data-action="create-member">Add member</button>
+        </div>
+      </div>`);
+  }
+
+  function modalNewRevision(projectId, existing){
+    const isEdit = !!existing;
+    const r = existing || {title:'', date:todayISO(), source:'Client', milestoneId:'', delayDays:'', notes:''};
+    const mss = milestonesFor(isEdit ? existing.projectId : projectId);
+    const msOpts = mss.map(m=>`<option value="${m.id}" ${r.milestoneId===m.id?'selected':''}>${escapeHtml(m.name)}</option>`).join('');
+    openModal(`
+      <div class="modal">
+        <div class="modal-head">${isEdit ? 'Edit scope change' : 'Log a scope change'}</div>
+        <div class="modal-body">
+          <div class="field"><label>What changed?</label><input id="mRevTitle" type="text" value="${escapeAttr(r.title)}" placeholder="e.g. Client requested full massing revision"/></div>
+          <div class="field"><label>Date</label><input id="mRevDate" type="date" value="${r.date}"/></div>
+          <div class="field"><label>Driven by</label>
+            <select id="mRevSource">
+              <option value="Client" ${r.source==='Client'?'selected':''}>Client</option>
+              <option value="Internal" ${r.source==='Internal'?'selected':''}>Our side (internal)</option>
+            </select>
+          </div>
+          <div class="field"><label>Affected milestone</label>
+            <select id="mRevMilestone"><option value="" ${!r.milestoneId?'selected':''}>Whole project / general</option>${msOpts}</select>
+          </div>
+          <div class="field"><label>Days added to timeline (if known)</label><input id="mRevDelay" type="number" min="0" value="${r.delayDays||''}" placeholder="e.g. 14"/></div>
+          <div class="field"><label>Notes</label><textarea id="mRevNotes" placeholder="What triggered it, and what it reset or reworked…">${escapeHtml(r.notes)}</textarea></div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost" data-action="close-modal">Cancel</button>
+          <button class="btn primary" data-action="${isEdit?'update-revision':'create-revision'}" data-project="${projectId||''}" ${isEdit?`data-id="${r.id}"`:''}>${isEdit?'Save changes':'Log change'}</button>
+        </div>
+      </div>`);
+  }
+
+  function modalNewEvent(milestoneId, existing){
+    const isEdit = !!existing;
+    const ev = existing || {title:'', type:'Internal meeting', date: todayISO(), notes:''};
+    openModal(`
+      <div class="modal">
+        <div class="modal-head">${isEdit ? 'Edit meeting / internal date' : 'Add a meeting or internal date'}</div>
+        <div class="modal-body">
+          <div class="field"><label>Title</label><input id="mEvTitle" type="text" value="${escapeAttr(ev.title)}" placeholder="e.g. Design review with structural engineer"/></div>
+          <div class="field"><label>Type</label>
+            <select id="mEvType">
+              ${['Internal meeting','Client meeting','Expert meeting','Internal deadline'].map(ty=>`<option value="${ty}" ${ev.type===ty?'selected':''}>${ty==='Expert meeting'?'Expert / consultant meeting':ty}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field"><label>Date</label><input id="mEvDate" type="date" value="${ev.date}"/></div>
+          <div class="field"><label>Notes (one point per line)</label><textarea id="mEvNotes" placeholder="Attendees&#10;Discussion point one&#10;Decision or action item…">${escapeHtml(ev.notes)}</textarea></div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost" data-action="close-modal">Cancel</button>
+          <button class="btn primary" data-action="${isEdit?'update-event':'create-event'}" data-milestone="${milestoneId}" ${isEdit?`data-id="${ev.id}"`:''}>${isEdit?'Save changes':'Add date'}</button>
+        </div>
+      </div>`);
+  }
+  function escapeAttr(s){ return escapeHtml(s).replace(/"/g,'&quot;'); }
+
+  function modalConfirmDelete(type, id, label){
+    state.pendingDelete = {type, id};
+    openModal(`
+      <div class="modal" style="width:340px;">
+        <div class="modal-head">Delete ${escapeHtml(label)}?</div>
+        <div class="modal-body">
+          <p style="margin:0;font-size:13px;color:var(--ink-soft);line-height:1.5;">This can't be undone. Everyone on the board will lose it too.</p>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost" data-action="close-modal">Cancel</button>
+          <button class="btn danger" data-action="confirm-delete" style="border-color:var(--markup);">Delete</button>
+        </div>
+      </div>`);
+  }
+
+  // ---------- Actions ----------
+  function handleClick(e){
+    const t = e.target.closest('[data-action]');
+    if(!t) return;
+    const action = t.dataset.action;
+
+    if(action==='close-modal' && e.target===t){ closeModal(); return; }
+
+    switch(action){
+      case 'select-project':
+        state.selectedProjectId = t.dataset.id;
+        state.selectedMilestoneId = null;
+        state.view='project';
+        render();
+        break;
+      case 'open-team':
+        state.view='team'; render();
+        break;
+      case 'view-person':
+        state.selectedPersonId = t.dataset.id;
+        state.view = 'person';
+        render();
+        break;
+      case 'open-overview':
+        state.view='overview'; render();
+        break;
+      case 'open-welcome':
+        state.view='welcome'; render();
+        break;
+      case 'new-project':
+        modalNewProject();
+        break;
+      case 'create-project': {
+        const name = document.getElementById('mProjName').value.trim();
+        if(!name) return;
+        const client = document.getElementById('mProjClient').value.trim();
+        const p = {id:uid(), name, client, status:'Active'};
+        state.projects.push(p);
+        state.selectedProjectId = p.id;
+        state.view='project';
+        saveProjects();
+        closeModal(); render();
+        break;
+      }
+      case 'set-project-status': break; // handled on change
+      case 'new-milestone':
+        modalNewMilestone(t.dataset.project);
+        break;
+      case 'create-milestone': {
+        const name = document.getElementById('mMsName').value.trim();
+        const due = document.getElementById('mMsDue').value;
+        if(!name || !due) return;
+        const m = {id:uid(), projectId:t.dataset.project, name, dueDate:due};
+        state.milestones.push(m);
+        state.selectedMilestoneId = m.id;
+        saveMilestones();
+        closeModal(); render();
+        break;
+      }
+      case 'request-delete':
+        modalConfirmDelete(t.dataset.type, t.dataset.id, t.dataset.label || 'this item');
+        break;
+      case 'confirm-delete': {
+        const pd = state.pendingDelete;
+        if(!pd) { closeModal(); break; }
+        if(pd.type==='milestone'){
+          state.milestones = state.milestones.filter(m=>m.id!==pd.id);
+          state.tasks = state.tasks.filter(ts=>ts.milestoneId!==pd.id);
+          state.events = state.events.filter(ev=>ev.milestoneId!==pd.id);
+          if(state.selectedMilestoneId===pd.id) state.selectedMilestoneId=null;
+          saveMilestones(); saveTasks(); saveEvents();
+        } else if(pd.type==='task'){
+          state.tasks = state.tasks.filter(x=>x.id!==pd.id);
+          saveTasks();
+        } else if(pd.type==='revision'){
+          state.revisions = state.revisions.filter(r=>r.id!==pd.id);
+          saveRevisions();
+        } else if(pd.type==='event'){
+          state.events = state.events.filter(ev=>ev.id!==pd.id);
+          saveEvents();
+        }
+        state.pendingDelete = null;
+        closeModal(); render();
+        break;
+      }
+      case 'select-milestone':
+        state.selectedMilestoneId = (state.selectedMilestoneId === t.dataset.id) ? null : t.dataset.id;
+        render();
+        break;
+      case 'close-milestone-panel':
+        state.selectedMilestoneId = null;
+        render();
+        break;
+      case 'remove-assignee': {
+        const task = state.tasks.find(x=>x.id===t.dataset.id);
+        if(task && Array.isArray(task.assignees)){
+          task.assignees = task.assignees.filter(id=>id!==t.dataset.member);
+          saveTasks(); render();
+        }
+        break;
+      }
+      case 'toggle-task-group':
+        state.expandedTaskGroups[t.dataset.key] = !state.expandedTaskGroups[t.dataset.key];
+        render();
+        break;
+      case 'add-task': {
+        const titleEl = document.getElementById('newTaskTitle');
+        const title = titleEl.value.trim();
+        if(!title) return;
+        const assignee = document.getElementById('newTaskAssignee').value;
+        const due = document.getElementById('newTaskDue').value;
+        const status = document.getElementById('newTaskStatus').value;
+        state.tasks.push({id:uid(), milestoneId:t.dataset.milestone, title, assignees: assignee ? [assignee] : [], dueDate:due, status});
+        saveTasks();
+        render();
+        break;
+      }
+      case 'new-revision':
+        modalNewRevision(t.dataset.project);
+        break;
+      case 'create-revision': {
+        const title = document.getElementById('mRevTitle').value.trim();
+        const date = document.getElementById('mRevDate').value;
+        if(!title || !date) return;
+        const source = document.getElementById('mRevSource').value;
+        const milestoneId = document.getElementById('mRevMilestone').value;
+        const delayDays = document.getElementById('mRevDelay').value;
+        const notes = document.getElementById('mRevNotes').value.trim();
+        state.revisions.push({
+          id: uid(), projectId: t.dataset.project, title, date, source,
+          milestoneId: milestoneId || '', delayDays: delayDays ? Number(delayDays) : 0, notes, resolved: false
+        });
+        saveRevisions();
+        closeModal(); render();
+        break;
+      }
+      case 'edit-revision': {
+        const rev = state.revisions.find(x=>x.id===t.dataset.id);
+        if(rev) modalNewRevision(rev.projectId, rev);
+        break;
+      }
+      case 'update-revision': {
+        const rev = state.revisions.find(x=>x.id===t.dataset.id);
+        if(!rev) return;
+        const title = document.getElementById('mRevTitle').value.trim();
+        const date = document.getElementById('mRevDate').value;
+        if(!title || !date) return;
+        rev.title = title;
+        rev.date = date;
+        rev.source = document.getElementById('mRevSource').value;
+        rev.milestoneId = document.getElementById('mRevMilestone').value || '';
+        const delayDays = document.getElementById('mRevDelay').value;
+        rev.delayDays = delayDays ? Number(delayDays) : 0;
+        rev.notes = document.getElementById('mRevNotes').value.trim();
+        saveRevisions();
+        closeModal(); render();
+        break;
+      }
+      case 'new-event':
+        modalNewEvent(t.dataset.milestone);
+        break;
+      case 'create-event': {
+        const title = document.getElementById('mEvTitle').value.trim();
+        const date = document.getElementById('mEvDate').value;
+        if(!title || !date) return;
+        const type = document.getElementById('mEvType').value;
+        const notes = document.getElementById('mEvNotes').value.trim();
+        state.events.push({id:uid(), milestoneId:t.dataset.milestone, title, type, date, notes});
+        saveEvents();
+        closeModal(); render();
+        break;
+      }
+      case 'toggle-event-expand':
+        state.expandedEvents[t.dataset.id] = !state.expandedEvents[t.dataset.id];
+        render();
+        break;
+      case 'edit-event': {
+        const ev = state.events.find(x=>x.id===t.dataset.id);
+        if(ev) modalNewEvent(ev.milestoneId, ev);
+        break;
+      }
+      case 'update-event': {
+        const ev = state.events.find(x=>x.id===t.dataset.id);
+        if(!ev) return;
+        const title = document.getElementById('mEvTitle').value.trim();
+        const date = document.getElementById('mEvDate').value;
+        if(!title || !date) return;
+        ev.title = title;
+        ev.date = date;
+        ev.type = document.getElementById('mEvType').value;
+        ev.notes = document.getElementById('mEvNotes').value.trim();
+        saveEvents();
+        closeModal(); render();
+        break;
+      }
+      case 'new-member':
+        modalNewMember();
+        break;
+      case 'create-member': {
+        const name = document.getElementById('mMemName').value.trim();
+        if(!name) return;
+        const role = document.getElementById('mMemRole').value.trim();
+        const color = document.getElementById('mMemColor').value;
+        const newMember = {id:uid(), name, role, color};
+        state.team.push(newMember);
+        saveTeam();
+        if(state.pendingAssignTaskId){
+          const task = state.tasks.find(x=>x.id===state.pendingAssignTaskId);
+          if(task){
+            if(!Array.isArray(task.assignees)) task.assignees = [];
+            if(!task.assignees.includes(newMember.id)) task.assignees.push(newMember.id);
+            saveTasks();
+          }
+          state.pendingAssignTaskId = null;
+        }
+        if(state.pendingIdentifyAfterCreate){
+          state.currentPersonId = newMember.id;
+          saveWhoami(newMember.id);
+          state.pendingIdentifyAfterCreate = false;
+          state.view = 'welcome';
+        }
+        closeModal(); render();
+        break;
+      }
+      case 'identify-as':
+        state.currentPersonId = t.dataset.id;
+        saveWhoami(t.dataset.id);
+        state.view = 'welcome';
+        render();
+        break;
+      case 'identify-new':
+        state.pendingIdentifyAfterCreate = true;
+        modalNewMember();
+        break;
+      case 'identify-skip':
+        state.currentPersonId = null;
+        saveWhoami('__skip__');
+        state.view = 'overview';
+        render();
+        break;
+      case 'switch-identity':
+        state.view = 'identify';
+        render();
+        break;
+    }
+  }
+
+  function handleChange(e){
+    if(e.target.dataset.action==='set-project-status'){
+      const p = state.projects.find(x=>x.id===e.target.dataset.id);
+      if(p){ p.status = e.target.value; saveProjects(); render(); }
+    }
+    if(e.target.dataset.action==='add-assignee'){
+      if(!e.target.value) return;
+      if(e.target.value==='__new__'){
+        state.pendingAssignTaskId = e.target.dataset.id;
+        modalNewMember();
+        render(); // reset the select back to its real value underneath the modal
+        return;
+      }
+      const task = state.tasks.find(x=>x.id===e.target.dataset.id);
+      if(task){
+        if(!Array.isArray(task.assignees)) task.assignees = [];
+        if(!task.assignees.includes(e.target.value)) task.assignees.push(e.target.value);
+        saveTasks(); render();
+      }
+    }
+    if(e.target.dataset.action==='toggle-revision-resolved'){
+      const rev = state.revisions.find(x=>x.id===e.target.dataset.id);
+      if(rev){ rev.resolved = e.target.checked; saveRevisions(); render(); }
+    }
+    if(e.target.dataset.action==='change-task-status'){
+      const task = state.tasks.find(x=>x.id===e.target.dataset.id);
+      if(task){ task.status = e.target.value; saveTasks(); render(); }
+    }
+    if(e.target.dataset.role==='new-task-status'){
+      e.target.className = 'task-status-select status-'+e.target.value;
+    }
+  }
+
+
+  function setAuthMessage(msg, ok=false){
+    const el=document.getElementById('authMessage');
+    if(el){ el.textContent=msg||''; el.style.color=ok ? 'var(--green)' : 'var(--markup)'; }
+  }
+
+  async function signIn(){
+    const email=document.getElementById('authEmail').value.trim();
+    const password=document.getElementById('authPassword').value;
+    setAuthMessage('Signing in…');
+    const {error}=await supabaseClient.auth.signInWithPassword({email,password});
+    if(error) setAuthMessage(error.message);
+  }
+
+  async function signUp(){
+    const email=document.getElementById('authEmail').value.trim();
+    const password=document.getElementById('authPassword').value;
+    setAuthMessage('Creating account…');
+    const {data,error}=await supabaseClient.auth.signUp({
+      email,password,
+      options:{emailRedirectTo:window.location.href}
+    });
+    if(error){ setAuthMessage(error.message); return; }
+    if(data.session) setAuthMessage('Account created. Signing you in…',true);
+    else setAuthMessage('Account created. Check your email to confirm, then sign in.',true);
+  }
+
+  function showSignedInUI(){
+    document.body.classList.remove('auth-locked');
+    const root=document.getElementById('authRoot');
+    if(root) root.remove();
+    let badge=document.getElementById('authUserBadge');
+    if(!badge){
+      badge=document.createElement('div');
+      badge.id='authUserBadge';
+      badge.className='auth-user';
+      document.body.appendChild(badge);
+    }
+    badge.innerHTML = `${escapeHtml(currentAuthUser?.email || 'Signed in')} <button class="auth-signout" id="authSignout">Sign out</button>`;
+    document.getElementById('authSignout').onclick=async()=>{
+      await supabaseClient.auth.signOut();
+      location.reload();
+    };
+  }
+
+  function subscribeRealtime(){
+    if(realtimeChannel) supabaseClient.removeChannel(realtimeChannel);
+    realtimeChannel = supabaseClient
+      .channel('studio-tracker-state')
+      .on('postgres_changes',{event:'*',schema:'public',table:'studio_state'},async()=>{
+        if(!currentAuthUser || state.saving) return;
+        await loadAll();
+        render();
+      })
+      .subscribe();
+  }
+
+  async function bootWithAuth(){
+    const {data:{session}}=await supabaseClient.auth.getSession();
+    if(!session){
+      document.body.classList.add('auth-locked');
+      document.getElementById('authForm').addEventListener('submit',e=>{e.preventDefault();signIn();});
+      document.getElementById('authSignup').addEventListener('click',signUp);
+      return;
+    }
+    currentAuthUser=session.user;
+    window.storage = supabaseAdapter();
+    usingLocalFallback=false;
+    showSignedInUI();
+    await loadAll();
+    render();
+    subscribeRealtime();
+  }
+
+  supabaseClient.auth.onAuthStateChange((_event, session)=>{
+    if(session && !currentAuthUser){
+      currentAuthUser=session.user;
+      window.storage=supabaseAdapter();
+      usingLocalFallback=false;
+      showSignedInUI();
+      loadAll().then(render);
+      subscribeRealtime();
+    }
+  });
+
+  document.addEventListener('click', handleClick);
+  document.addEventListener('change', handleChange);
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='Enter' && e.target.id==='newTaskTitle'){
+      const btn = document.querySelector('[data-action="add-task"]');
+      if(btn) btn.click();
+    }
+  });
+
+  bootWithAuth();
+})();
+</script>
+</body>
+</html>
