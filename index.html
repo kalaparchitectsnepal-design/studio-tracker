@@ -172,7 +172,7 @@
   .btn.ghost{border-color:transparent;background:none;}
   .btn.ghost:hover{background:var(--sheet-alt);}
   .btn.small{padding:5px 9px;font-size:11.5px;}
-  .btn.danger{color:#9C3B2B;}
+  .btn.danger{color:#9C3B2B;border-color:#9C3B2B;}
 
   /* ---------- Main ---------- */
   .main{flex:1;min-width:0;padding:28px 40px 60px;}
@@ -697,30 +697,46 @@
         'Prefer': 'return=representation,resolution=merge-duplicates'
       };
     }
+    // Personal (non-shared) data must be scoped per signed-in user, or every colleague
+    // reading/writing the same key (e.g. "who am I") would clobber each other's rows.
+    function rowKey(key, shared){
+      if(shared===false){
+        const uid = currentAuthUser && currentAuthUser.id;
+        return 'personal:'+(uid||'anon')+':'+key;
+      }
+      return key;
+    }
     return {
-      async get(key){
-        const r=await fetch(base+'?key=eq.'+encodeURIComponent(key)+'&select=key,value,updated_at', {headers:await headers()});
+      async get(key, shared){
+        const dbKey = rowKey(key, shared);
+        const r=await fetch(base+'?key=eq.'+encodeURIComponent(dbKey)+'&select=key,value,updated_at', {headers:await headers()});
         if(!r.ok) throw new Error('shared get failed '+r.status);
         const rows=await r.json();
         if(!rows.length) throw new Error('key not found: '+key);
-        return {key,value:rows[0].value,shared:true,updated_at:rows[0].updated_at};
+        return {key,value:rows[0].value,shared:shared!==false,updated_at:rows[0].updated_at};
       },
-      async set(key,value){
-        const r=await fetch(base,{method:'POST',headers:await headers(),body:JSON.stringify({key,value,updated_at:new Date().toISOString()})});
+      async set(key,value,shared){
+        const dbKey = rowKey(key, shared);
+        const r=await fetch(base,{method:'POST',headers:await headers(),body:JSON.stringify({key:dbKey,value,updated_at:new Date().toISOString()})});
         if(!r.ok) throw new Error('shared set failed '+r.status+' '+await r.text());
         const rows=await r.json();
-        return {key,value,shared:true,row:rows[0]};
+        return {key,value,shared:shared!==false,row:rows[0]};
       },
-      async delete(key){
-        const r=await fetch(base+'?key=eq.'+encodeURIComponent(key),{method:'DELETE',headers:await headers()});
+      async delete(key, shared){
+        const dbKey = rowKey(key, shared);
+        const r=await fetch(base+'?key=eq.'+encodeURIComponent(dbKey),{method:'DELETE',headers:await headers()});
         if(!r.ok) throw new Error('shared delete failed '+r.status);
-        return {key,deleted:true,shared:true};
+        return {key,deleted:true,shared:shared!==false};
       },
-      async list(prefix){
-        const q=prefix ? '&key=like.'+encodeURIComponent(prefix+'*') : '';
+      async list(prefix, shared){
+        const dbPrefix = rowKey(prefix||'', shared);
+        const q='&key=like.'+encodeURIComponent(dbPrefix+'*');
         const r=await fetch(base+'?select=key,value,updated_at'+q, {headers:await headers()});
         if(!r.ok) throw new Error('shared list failed '+r.status);
-        return {keys:await r.json(),prefix,shared:true};
+        const rows = await r.json();
+        const stripLen = shared===false ? dbPrefix.length - (prefix||'').length : 0;
+        rows.forEach(row=>{ row.key = row.key.slice(stripLen); });
+        return {keys:rows,prefix,shared:shared!==false};
       }
     };
   }
@@ -973,9 +989,12 @@
           <div class="client">${escapeHtml(p.client||'No client set')}</div>
           <h1>${escapeHtml(p.name)}</h1>
         </div>
-        <select class="status-select" data-action="set-project-status" data-id="${p.id}">
-          ${['Active','On hold','Complete'].map(s=>`<option value="${s}" ${p.status===s?'selected':''}>${s}</option>`).join('')}
-        </select>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <select class="status-select" data-action="set-project-status" data-id="${p.id}">
+            ${['Active','On hold','Complete'].map(s=>`<option value="${s}" ${p.status===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+          <button class="btn small danger" data-action="request-delete" data-type="project" data-id="${p.id}" data-label="this project and everything under it (milestones, work items, meetings, change log)" title="Delete project">Delete project</button>
+        </div>
       </div>
 
       <div class="stat-row">
@@ -1811,6 +1830,18 @@
         } else if(pd.type==='event'){
           state.events = state.events.filter(ev=>ev.id!==pd.id);
           saveEvents();
+        } else if(pd.type==='project'){
+          const msIds = state.milestones.filter(m=>m.projectId===pd.id).map(m=>m.id);
+          state.projects = state.projects.filter(pr=>pr.id!==pd.id);
+          state.milestones = state.milestones.filter(m=>m.projectId!==pd.id);
+          state.tasks = state.tasks.filter(ts=>!msIds.includes(ts.milestoneId));
+          state.events = state.events.filter(ev=>!msIds.includes(ev.milestoneId));
+          state.revisions = state.revisions.filter(r=>r.projectId!==pd.id);
+          if(state.selectedProjectId===pd.id){
+            state.selectedProjectId = state.projects.length ? state.projects[0].id : null;
+          }
+          state.selectedMilestoneId = null;
+          saveProjects(); saveMilestones(); saveTasks(); saveEvents(); saveRevisions();
         }
         state.pendingDelete = null;
         closeModal(); render();
